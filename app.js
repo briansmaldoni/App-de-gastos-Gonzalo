@@ -8,7 +8,7 @@
 // ============================================================
 // CONFIGURACIÓN DE CONEXIÓN AL BACKEND & SERVICE WORKER
 // ============================================================
-const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwfnvLWDk6Rf2kb9oO64GL18UMBdbGQaM7QX_Ut7elBI1ljM5QhXdNbxcDS4pAJ8SiEZw/exec';
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwXrTj_gDl5Pc72Ay6gnWxypF3JJhrZIMk93SMOy7dEnHZG-15kuppMfH1nGmctCpTjBw/exec';
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Error:', err));
