@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * MINIMAL FINANCE — FRONTEND COMPLETO CON OPTIMISTIC UI (app.js)
+ * MULTIMILLONARIOS FINANCE — FRONTEND COMPLETO CON OPTIMISTIC UI (app.js)
  * Motor Diario (Vista Micro) + Proyección Mensual (Vista Macro)
  * ============================================================
  */
@@ -363,7 +363,6 @@ function calcularComposicion_() {
     });
   });
 
-  // CORRECCIÓN: Redondear objetivoBase a 2 decimales para evitar arrastre de error flotante
   let objetivoBase = dias.length > 0 ? ((liquidHB + gastosEnPeriodo) / dias.length) : 0;
   objetivoBase = Math.round(objetivoBase * 100) / 100;
   
@@ -591,7 +590,6 @@ async function resolverCandidatoLimpiar(accion) {
       });
     }
 
-    // CORRECCIÓN: Optimistic clear + sync from return sin recargar toda la hoja
     appState.movimientos = appState.movimientos.filter(m => String(m.id) !== String(candidato.id));
     if (res && res.movimiento) appState.movimientos.push(res.movimiento);
     if (res && res.homeBankingTotal !== undefined) {
@@ -636,7 +634,7 @@ async function resolveDayChange(decision) {
     appState.bolsaTotal = resultado.bolsaTotal;
     appState.lastProcessedDate = resultado.lastProcessedDate;
     cierreDiaPendiente = null;
-    renderMicroView(); // UI optimista parcial
+    renderMicroView();
   } catch (e) {
     alert('Error al cerrar día: ' + e.message);
   } finally {
@@ -759,7 +757,6 @@ async function handleFormSubmit() {
         const rawDays = customDaysRaw.split(',').map(s => parseInt(s.trim(), 10)).filter(dia => !isNaN(dia));
 
         fechasAfectadas = rawDays.map(dia => {
-          // CORRECCIÓN: Validación estricta de días para evitar meses desbordados en Javascript
           if (dia < 1 || dia > 31) throw new Error(`El día ${dia} es inválido. Debe estar entre 1 y 31.`);
 
           if (dia < lastDay || (lastDay === 0 && dia < base.getDate())) {
@@ -794,14 +791,13 @@ async function handleFormSubmit() {
 
   toggleModal(false);
   
-  // Update Optimista
   const idMov = editingMovimientoId || ('tx_' + Date.now());
   const nuevoMov = {
     id: idMov,
     tipo: txModalSubtype,
     fechasAfectadas: fechasAfectadas,
     monto: monto,
-    montoPorFecha: Math.round((monto / fechasAfectadas.length) * 100) / 100, // CORRECCIÓN: Redondeo decimal
+    montoPorFecha: Math.round((monto / fechasAfectadas.length) * 100) / 100,
     descripcion: descripcion,
     usuario: appState.activeUser,
     fromBag: fromBag
@@ -822,7 +818,6 @@ async function handleFormSubmit() {
 
   renderMicroView();
 
-  // CORRECCIÓN: single round-trip - evitamos ejecutar recargarEstadoDiario_
   callBackendBackground('guardarMovimiento', {
     id: editingMovimientoId,
     tipo: txModalSubtype,
@@ -996,13 +991,11 @@ function renderMacroView() {
   const data = appState.macroData;
   if (!data) return;
 
-  // Header del Mes
   const monthDisplay = document.getElementById('current-month-display');
   if (monthDisplay) {
     monthDisplay.textContent = NOMBRES_MESES[data.month] + ' ' + data.year;
   }
 
-  // Badges SAC y Premio / Ajuste
   const esSacMonth = (data.month === 5 || data.month === 11);
   const esPrizeMonth = (data.month === 1 || data.month === 4 || data.month === 7 || data.month === 10);
 
@@ -1026,7 +1019,6 @@ function renderMacroView() {
 
   const usdRate = data.usdRate || 1;
 
-  // Calculo de SAC
   let sacCalculado = 0;
   if (esSacMonth) {
     const sacB = data.sacBrian !== null ? data.sacBrian : (data.salaryBrian / 2);
@@ -1036,31 +1028,26 @@ function renderMacroView() {
     if (sacDisplay) sacDisplay.textContent = formatearMoneda_(sacCalculado);
   }
 
-  // Calculo de Premio / Ajuste
   let premioCalculado = data.premio || 0;
   const prizeDisplay = document.getElementById('macro-prize-display');
   if (prizeDisplay) prizeDisplay.textContent = formatearMoneda_(premioCalculado);
 
-  // Deudas a Favor (Ingresos)
   const deudas = (data.gastosFijos || []).filter(g => g.tipo === 'deuda');
   let totalDeudasARS = 0;
   deudas.forEach(d => {
     totalDeudasARS += d.moneda === 'USD' ? (d.monto * usdRate) : d.monto;
   });
 
-  // Total Ingresos
   const totalIngresos = data.salaryBrian + data.salaryVirginia + sacCalculado + premioCalculado + totalDeudasARS;
   const incomeTotalEl = document.getElementById('macro-income-total');
   if (incomeTotalEl) incomeTotalEl.textContent = formatearMoneda_(totalIngresos);
 
-  // Gastos Fijos (Excluyendo Deudas)
   const gastosFijos = (data.gastosFijos || []).filter(g => g.tipo === 'gasto');
   let totalGastosFijosARS = 0;
   gastosFijos.forEach(g => {
     totalGastosFijosARS += g.moneda === 'USD' ? (g.monto * usdRate) : g.monto;
   });
 
-  // Servicios Habilitados
   const deshabilitados = data.serviciosDeshabilitadosEsteMes || [];
   const serviciosHabilitados = (data.serviciosFijos || []).filter(s => !deshabilitados.includes(s.id));
   let totalServiciosARS = 0;
@@ -1068,12 +1055,10 @@ function renderMacroView() {
     totalServiciosARS += s.moneda === 'USD' ? (s.monto * usdRate) : s.monto;
   });
 
-  // Total Gastos
   const totalGastos = totalGastosFijosARS + totalServiciosARS;
   const expensesTotalEl = document.getElementById('macro-expenses-total');
   if (expensesTotalEl) expensesTotalEl.textContent = formatearMoneda_(totalGastos);
 
-  // Resto Neto
   const restoNeto = totalIngresos - totalGastos;
   const balanceDisplay = document.getElementById('macro-net-balance-display');
   const statusBadge = document.getElementById('macro-net-status-badge');
@@ -1089,7 +1074,6 @@ function renderMacroView() {
     }
   }
 
-  // Renders de listas desglosadas
   renderMacroIncomesList_(data, sacCalculado, premioCalculado, deudas, usdRate);
   renderMacroExpensesList_(gastosFijos, serviciosHabilitados, usdRate);
   renderMacroServicesToggleList_(data.serviciosFijos || [], deshabilitados, usdRate);
@@ -1245,7 +1229,6 @@ function toggleDebtsCollapse() {
   if (arrow) arrow.classList.toggle('rotate-180');
 }
 
-// TOGGLE SERVICIO INDIVIDUAL CON UI OPTIMISTA
 function toggleServicioStatus(servicioId, habilitado) {
   if (!appState.macroData) return;
 
@@ -1268,7 +1251,6 @@ function toggleServicioStatus(servicioId, habilitado) {
   });
 }
 
-// TOGGLE MASIVO CON BATCH BKG Y UI OPTIMISTA
 function toggleAllServicesCheckboxes(e) {
   e.stopPropagation();
   const data = appState.macroData;
@@ -1293,7 +1275,7 @@ function toggleAllServicesCheckboxes(e) {
 }
 
 // ============================================================
-// MODALES Y ACCIONES MACRO (PROYECCIÓN MENSUAL Y BORRADOR)
+// MODALES Y ACCIONES MACRO
 // ============================================================
 
 function toggleMacroConfigModal(show) {
@@ -1660,7 +1642,6 @@ function handleFixedExpenseSubmit() {
 
   const tempId = currentEditingFixedExpenseId || ('temp_fe_' + Date.now());
 
-  // Optimistic UI Update
   if (appState.macroData && appState.macroData.gastosFijos) {
     const list = appState.macroData.gastosFijos;
     let item = list.find(x => String(x.id) === String(currentEditingFixedExpenseId));
@@ -1698,7 +1679,6 @@ function handleFixedExpenseSubmit() {
     renderMacroView();
   }
 
-  // CORRECCIÓN: Resolver el ID devuelto por Apps Script con `.then` en ambos casos (igual que saveMacroConfig)
   if (replicate) {
     callBackendBackground('guardarGastoFijo', {
       id: currentEditingFixedExpenseId,
@@ -1905,7 +1885,7 @@ function quickAddFixedExpense(user) {
 }
 
 // ============================================================
-// CARGA DE ESTADO Y BOOTSTRAP (SINCRONO REMOVIDO)
+// CARGA DE ESTADO Y BOOTSTRAP
 // ============================================================
 
 async function recargarEstadoDiario_(conToast) {
@@ -1947,7 +1927,6 @@ async function bootstrapEstado_() {
 
   switchView(appState.currentView);
 
-  // CORRECCIÓN: Resolvemos el estado de cierre en una sola request serial inicial.
   if (data.cierrePendiente) {
     cierreDiaPendiente = data.cierrePendiente;
     mostrarModalCierreDia_(cierreDiaPendiente);
