@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * MINIMAL FINANCE — BACKEND OPTIMIZADO (Google Apps Script)
+ * MULTIMILLONARIOS FINANCE — BACKEND OPTIMIZADO (Google Apps Script)
  * ============================================================
  */
 
@@ -88,7 +88,6 @@ function responderJSON_(obj) {
 }
 
 function ejecutarAccion_(accion, payload) {
-  // Lista de acciones que leen, mutan y escriben estado crítico (requieren exclusión mutua)
   const mutaciones = [
     'guardarMovimiento', 'eliminarMovimiento', 'actualizarHB', 
     'limpiarMovimientosPendientes', 'resolverCierreDia', 'actualizarConfig', 
@@ -403,7 +402,6 @@ function calcularFeriadosDelAnio_(year) {
 function esFeriado_(fecha, feriadosExtra) {
   const delAnio = calcularFeriadosDelAnio_(fecha.getFullYear());
   if (delAnio.some(f => mismaFecha_(f, fecha))) return true;
-  // CORRECCIÓN: Convención 1-indexado de la hoja Feriados a 0-indexado JS
   return feriadosExtra.some(f => f.year === fecha.getFullYear() && (f.month - 1) === fecha.getMonth() && f.day === fecha.getDate());
 }
 
@@ -415,7 +413,6 @@ function esHabil_(fecha, feriadosExtra) {
 
 function calcularDiaCobro_(year, month, feriadosExtra) {
   let habiles = 0;
-  // CORRECCIÓN: Ampliación de rango de búsqueda a 25 para evitar crasheo
   for (let dia = 1; dia <= 25; dia++) {
     const fecha = new Date(year, month, dia);
     if (esHabil_(fecha, feriadosExtra)) {
@@ -424,7 +421,7 @@ function calcularDiaCobro_(year, month, feriadosExtra) {
     }
   }
   console.error('No se pudo calcular el día de cobro para ' + year + '-' + (month + 1));
-  return new Date(year, month, 10); // Fallback controlado
+  return new Date(year, month, 10);
 }
 
 function calcularProximoCobro_(desde, feriadosExtra) {
@@ -498,7 +495,6 @@ function getEstadoDiario_() {
   const hoyStr = formatearFechaISO_(new Date());
   
   let cierrePendiente = null;
-  // CORRECCIÓN: Server-side source of truth en detección de cierre y pre-resolución
   if (lastProcessed && lastProcessed < hoyStr) {
     const diff = calcularDiferenciaCierre_(lastProcessed);
     if (Math.abs(diff) < 1) {
@@ -509,11 +505,10 @@ function getEstadoDiario_() {
     }
   }
 
-  // CORRECCIÓN: Filtrar el historial muy antiguo para no engordar el payload
   const ventana = [cfg.lastProcessedDate].concat(diasInfo.fechas).filter(Boolean);
   const minFechaBase = ventana.reduce((a, b) => a < b ? a : b); 
   const dateMin = new Date(minFechaBase + 'T00:00:00');
-  dateMin.setDate(dateMin.getDate() - 5); // Enviamos los ultimos 5 días también por contexto
+  dateMin.setDate(dateMin.getDate() - 5);
   const threshold = formatearFechaISO_(dateMin);
 
   const movimientos = leerFilas_('Movimientos')
@@ -581,7 +576,7 @@ function guardarMovimiento_(data) {
     tipo: data.tipo,
     fechasAfectadas: fechas,
     monto: data.monto,
-    montoPorFecha: Math.round((data.monto / fechas.length) * 100) / 100, // CORRECCIÓN: Redondeo decimal Server-side
+    montoPorFecha: Math.round((data.monto / fechas.length) * 100) / 100,
     descripcion: data.descripcion || '',
     usuario: data.usuario,
     fromBag: nuevoFromBag,
@@ -591,7 +586,6 @@ function guardarMovimiento_(data) {
   const actualizado = data.id ? actualizarFilaPorId_('Movimientos', id, obj) : false;
   if (!actualizado) agregarFila_('Movimientos', obj);
   
-  // CORRECCIÓN: Retornar los saldos y el movimiento para evitar el doble round-trip de sync
   return {
     movimiento: obj,
     homeBankingTotal: hbTotal,
@@ -620,7 +614,6 @@ function eliminarMovimiento_(id) {
 
     borrarFilaPorId_('Movimientos', id);
     
-    // CORRECCIÓN: Retornar saldos actualizados
     return {
       success: true,
       homeBankingTotal: hbTotal,
@@ -688,7 +681,6 @@ function resolverCierreDia_(payload) {
   const hoyStr = formatearFechaISO_(new Date());
 
   if (lastProcessed && lastProcessed < hoyStr) {
-    // CORRECCIÓN: Recalcular la diferencia real Server-side y no confiar en monto del cliente
     const diffRounded = calcularDiferenciaCierre_(lastProcessed);
 
     if (payload.decision === 'bolsa') {
@@ -813,7 +805,6 @@ function getEstadoMensual_(year, month) {
   };
 }
 
-// CORRECCIÓN: BATCH MASIVO DE SERVICIOS
 function toggleAllServiciosBatch_(year, month, habilitarTodos) {
   const sheet = getSheet_('ServiciosDeshabilitados', true);
   const values = sheet.getDataRange().getValues();
@@ -835,7 +826,6 @@ function toggleAllServiciosBatch_(year, month, habilitarTodos) {
   return true;
 }
 
-// CORRECCIÓN: BATCH EN MEMORIA (1 Lectura + 1 Escritura en Config. Macro)
 function guardarConfiguracionMacroBatch_(payload) {
   setConfigValores_({
     usdRate: payload.usdRate,
