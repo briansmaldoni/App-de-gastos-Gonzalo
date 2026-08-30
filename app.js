@@ -403,19 +403,19 @@ function renderTransactionList_() {
   const cont = document.getElementById('transaction-list');
   if (!cont) return;
   const hoyStr = hoyISO_();
-  const diasPeriodo = appState.diasRestantes || [];
 
-  const delPeriodo = appState.movimientos.filter(m => {
-    const fechas = normalizarFechas_(m.fechasAfectadas);
-    return fechas.some(f => diasPeriodo.includes(f) || f >= hoyStr);
-  });
-
-  if (!delPeriodo.length) {
+  if (!appState.movimientos || !appState.movimientos.length) {
     cont.innerHTML = '<p class="text-[11px] text-zinc-400 text-center py-3">Sin movimientos registrados</p>';
     return;
   }
 
-  cont.innerHTML = delPeriodo.map(m => {
+  const listaOrdenada = appState.movimientos.slice().sort((a, b) => {
+    const fA = normalizarFechas_(a.fechasAfectadas)[0] || '';
+    const fB = normalizarFechas_(b.fechasAfectadas)[0] || '';
+    return fB.localeCompare(fA);
+  });
+
+  cont.innerHTML = listaOrdenada.map(m => {
     const titulo = m.descripcion || (m.tipo === 'divisible' ? 'Gasto divisible' : 'Gasto único');
     const fechas = normalizarFechas_(m.fechasAfectadas);
     
@@ -610,6 +610,7 @@ async function resolverCandidatoLimpiar(accion) {
 // ============================================================
 
 function mostrarModalCierreDia_(info) {
+  if (!info) return;
   const esDeficit = info.tipo === 'deficit';
   document.getElementById('day-change-title').textContent = esDeficit ? '📉 Día anterior en rojo' : '☀️ ¡Nuevo Día Detectado!';
   document.getElementById('day-change-desc').innerHTML = esDeficit
@@ -990,7 +991,12 @@ function changeMonth(delta) {
     monthDisplay.textContent = NOMBRES_MESES[m] + ' ' + y;
   }
 
-  recargarEstadoMensual_();
+  callBackendBackground('getEstadoMensual', { year: y, month: m }).then(data => {
+    if (data && data.year === appState.currentMacroYear && data.month === appState.currentMacroMonth) {
+      appState.macroData = data;
+      renderMacroView();
+    }
+  });
 }
 
 function renderMacroView() {
