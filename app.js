@@ -984,6 +984,12 @@ function changeMonth(delta) {
   if (m > 11) { m = 0; y++; }
   appState.currentMacroMonth = m;
   appState.currentMacroYear = y;
+
+  const monthDisplay = document.getElementById('current-month-display');
+  if (monthDisplay) {
+    monthDisplay.textContent = NOMBRES_MESES[m] + ' ' + y;
+  }
+
   recargarEstadoMensual_();
 }
 
@@ -1564,7 +1570,7 @@ function openFixedExpenseModal(user, expenseId) {
       document.getElementById('fixed-desc').value = g.descripcion || '';
       document.getElementById('fixed-currency').value = g.moneda || 'ARS';
 
-      const isDirect = (g.isDirect !== undefined && g.isDirect !== null) ? Boolean(g.isDirect) : true;
+      const isDirect = g.isDirect === true || String(g.isDirect).toLowerCase() === 'true' || g.isDirect === 1;
       if (chkDirect) chkDirect.checked = isDirect;
       toggleFixedMode(isDirect);
 
@@ -1643,7 +1649,10 @@ function handleFixedExpenseSubmit() {
   const list = (appState.macroData && appState.macroData.gastosFijos) ? appState.macroData.gastosFijos : [];
   const existente = list.find(x => String(x.id) === String(currentEditingFixedExpenseId));
 
-  const startYear = existente ? existente.activoDesdeYear : appState.currentMacroYear;
+  const startYear = (existente && existente.activoDesdeYear !== undefined && existente.activoDesdeYear !== null) 
+    ? existente.activoDesdeYear 
+    : appState.currentMacroYear;
+
   const startMonth = (existente && existente.activoDesdeMonth !== undefined && existente.activoDesdeMonth !== null) 
     ? existente.activoDesdeMonth 
     : appState.currentMacroMonth;
@@ -1944,7 +1953,7 @@ async function bootstrapEstado_() {
 
   if (data.cierrePendiente) {
     cierreDiaPendiente = data.cierrePendiente;
-    mostrarModalCierreDia_(info);
+    mostrarModalCierreDia_(cierreDiaPendiente);
   }
 }
 
