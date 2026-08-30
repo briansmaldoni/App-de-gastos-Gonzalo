@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * MINIMAL FINANCE — BACKEND OPTIMIZADO (Google Apps Script)
+ * MULTIMILLONARIOS FINANCE — BACKEND OPTIMIZADO (Google Apps Script)
  * ============================================================
  */
 
@@ -196,7 +196,7 @@ function castValor_(sheetName, col, raw) {
       return isNaN(n) ? null : n;
     }
     case 'boolean':
-      return raw === true || String(raw).toUpperCase() === 'TRUE' || raw === 1 || raw === '1';
+      return raw === true || String(raw).toLowerCase() === 'true' || raw === 1 || raw === '1';
     case 'json':
       if (typeof raw === 'object' && raw !== null) return raw;
       if (typeof raw === 'string') {
@@ -890,7 +890,7 @@ function guardarConfiguracionMacroBatch_(payload) {
 
 function guardarGastoFijo_(data) {
   const id = data.id || Utilities.getUuid();
-  const isDirect = !!data.isDirect;
+  const isDirect = data.isDirect === true || String(data.isDirect).toLowerCase() === 'true' || data.isDirect === 1;
   const units = data.units || 1;
   const unitPrice = data.unitPrice || 0;
   const tipoReal = (data.tipo === 'debt' || data.tipo === 'deuda') ? 'deuda' : 'gasto';
@@ -898,13 +898,22 @@ function guardarGastoFijo_(data) {
   const filas = leerFilas_('GastosFijos');
   const existente = data.id ? filas.find(g => String(g.id).trim() === String(data.id).trim()) : null;
 
-  const activoDesdeYear = (data.activoDesdeYear !== undefined && data.activoDesdeYear !== null && data.activoDesdeYear !== '')
-    ? Number(data.activoDesdeYear)
-    : (existente && existente.activoDesdeYear !== undefined && existente.activoDesdeYear !== null ? Number(existente.activoDesdeYear) : Number(new Date().getFullYear()));
+  let activoDesdeYear, activoDesdeMonth;
+  if (existente && existente.activoDesdeYear !== null && existente.activoDesdeYear !== undefined && existente.activoDesdeYear !== '') {
+    activoDesdeYear = Number(existente.activoDesdeYear);
+  } else {
+    activoDesdeYear = (data.activoDesdeYear !== undefined && data.activoDesdeYear !== null && data.activoDesdeYear !== '')
+      ? Number(data.activoDesdeYear)
+      : Number(new Date().getFullYear());
+  }
 
-  const activoDesdeMonth = (data.activoDesdeMonth !== undefined && data.activoDesdeMonth !== null && data.activoDesdeMonth !== '')
-    ? Number(data.activoDesdeMonth)
-    : (existente && existente.activoDesdeMonth !== undefined && existente.activoDesdeMonth !== null ? Number(existente.activoDesdeMonth) : 0);
+  if (existente && existente.activoDesdeMonth !== null && existente.activoDesdeMonth !== undefined && existente.activoDesdeMonth !== '') {
+    activoDesdeMonth = Number(existente.activoDesdeMonth);
+  } else {
+    activoDesdeMonth = (data.activoDesdeMonth !== undefined && data.activoDesdeMonth !== null && data.activoDesdeMonth !== '')
+      ? Number(data.activoDesdeMonth)
+      : 0;
+  }
 
   const hastaYear = (data.hastaYear !== undefined) ? data.hastaYear : (existente ? existente.hastaYear : null);
   const hastaMonth = (data.hastaMonth !== undefined) ? data.hastaMonth : (existente ? existente.hastaMonth : null);
@@ -922,8 +931,8 @@ function guardarGastoFijo_(data) {
     activoDesdeYear: activoDesdeYear,
     activoDesdeMonth: activoDesdeMonth,
     cuotasTotales: data.cuotasTotales || null,
-    hastaYear: (hastaYear !== '' && hastaYear !== undefined) ? hastaYear : null,
-    hastaMonth: (hastaMonth !== '' && hastaMonth !== undefined) ? hastaMonth : null
+    hastaYear: (hastaYear !== '' && hastaYear !== undefined && hastaYear !== null) ? Number(hastaYear) : null,
+    hastaMonth: (hastaMonth !== '' && hastaMonth !== undefined && hastaMonth !== null) ? Number(hastaMonth) : null
   };
   const actualizado = data.id ? actualizarFilaPorId_('GastosFijos', id, obj) : false;
   if (!actualizado) agregarFila_('GastosFijos', obj);
