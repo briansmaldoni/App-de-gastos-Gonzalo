@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * MULTIMILLONARIOS FINANCE — BACKEND OPTIMIZADO (Google Apps Script)
+ * MINIMAL FINANCE — BACKEND OPTIMIZADO (Google Apps Script)
  * ============================================================
  */
 
@@ -60,7 +60,7 @@ const SHEET_SCHEMAS = {
 };
 
 // ============================================================
-// 2. ENTRY POINTS Y ROUTER CON LOCK SERVICE
+// 2. ENTRY POINTS Y ROUTER
 // ============================================================
 
 function doPost(e) {
@@ -88,50 +88,26 @@ function responderJSON_(obj) {
 }
 
 function ejecutarAccion_(accion, payload) {
-  const mutaciones = [
-    'guardarMovimiento', 'eliminarMovimiento', 'actualizarHB', 
-    'limpiarMovimientosPendientes', 'resolverCierreDia', 'actualizarConfig', 
-    'guardarGastoFijo', 'guardarExcepcionGastoFijo', 'eliminarGastoFijo', 
-    'toggleServicio', 'toggleAllServiciosBatch', 'guardarServicioFijo', 
-    'eliminarServicioFijo', 'guardarPremio', 'guardarSacOverride', 'guardarConfiguracionMacroBatch'
-  ];
-
-  let lock = null;
-  if (mutaciones.includes(accion)) {
-    lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(10000);
-    } catch (e) {
-      throw new Error('El sistema está procesando otra operación. Por favor, reintentá en unos segundos.');
-    }
-  }
-
-  try {
-    switch (accion) {
-      case 'getEstadoDiario': return getEstadoDiario_();
-      case 'guardarMovimiento': return guardarMovimiento_(payload);
-      case 'eliminarMovimiento': return eliminarMovimiento_(payload.id);
-      case 'actualizarHB': return actualizarHB_(payload);
-      case 'limpiarMovimientosPendientes': return limpiarMovimientosPendientes_();
-      case 'resolverCierreDia': return resolverCierreDia_(payload);
-      case 'actualizarConfig': return actualizarConfig_(payload);
-      case 'getEstadoMensual': return getEstadoMensual_(payload.year, payload.month);
-      case 'guardarGastoFijo': return guardarGastoFijo_(payload);
-      case 'guardarExcepcionGastoFijo': return guardarExcepcionGastoFijo_(payload);
-      case 'eliminarGastoFijo': return eliminarGastoFijo_(payload.id);
-      case 'toggleServicio': return toggleServicio_(payload.servicioId, payload.year, payload.month, payload.habilitado);
-      case 'toggleAllServiciosBatch': return toggleAllServiciosBatch_(payload.year, payload.month, payload.habilitarTodos);
-      case 'guardarServicioFijo': return guardarServicioFijo_(payload);
-      case 'eliminarServicioFijo': return eliminarServicioFijo_(payload.id);
-      case 'guardarPremio': return guardarPremio_(payload);
-      case 'guardarSacOverride': return guardarSacOverride_(payload);
-      case 'guardarConfiguracionMacroBatch': return guardarConfiguracionMacroBatch_(payload);
-      default: throw new Error('Acción desconocida: ' + accion);
-    }
-  } finally {
-    if (lock) {
-      lock.releaseLock();
-    }
+  switch (accion) {
+    case 'getEstadoDiario': return getEstadoDiario_();
+    case 'guardarMovimiento': return guardarMovimiento_(payload);
+    case 'eliminarMovimiento': return eliminarMovimiento_(payload.id);
+    case 'actualizarHB': return actualizarHB_(payload);
+    case 'limpiarMovimientosPendientes': return limpiarMovimientosPendientes_();
+    case 'resolverCierreDia': return resolverCierreDia_(payload);
+    case 'actualizarConfig': return actualizarConfig_(payload);
+    case 'getEstadoMensual': return getEstadoMensual_(payload.year, payload.month);
+    case 'guardarGastoFijo': return guardarGastoFijo_(payload);
+    case 'guardarExcepcionGastoFijo': return guardarExcepcionGastoFijo_(payload);
+    case 'eliminarGastoFijo': return eliminarGastoFijo_(payload.id);
+    case 'toggleServicio': return toggleServicio_(payload.servicioId, payload.year, payload.month, payload.habilitado);
+    case 'toggleAllServiciosBatch': return toggleAllServiciosBatch_(payload.year, payload.month, payload.habilitarTodos);
+    case 'guardarServicioFijo': return guardarServicioFijo_(payload);
+    case 'eliminarServicioFijo': return eliminarServicioFijo_(payload.id);
+    case 'guardarPremio': return guardarPremio_(payload);
+    case 'guardarSacOverride': return guardarSacOverride_(payload);
+    case 'guardarConfiguracionMacroBatch': return guardarConfiguracionMacroBatch_(payload);
+    default: throw new Error('Acción desconocida: ' + accion);
   }
 }
 
@@ -196,7 +172,7 @@ function castValor_(sheetName, col, raw) {
       return isNaN(n) ? null : n;
     }
     case 'boolean':
-      return raw === true || String(raw).toLowerCase() === 'true' || raw === 1 || raw === '1';
+      return raw === true || raw === 'true' || raw === 1 || raw === '1';
     case 'json':
       if (typeof raw === 'object' && raw !== null) return raw;
       if (typeof raw === 'string') {
@@ -402,7 +378,7 @@ function calcularFeriadosDelAnio_(year) {
 function esFeriado_(fecha, feriadosExtra) {
   const delAnio = calcularFeriadosDelAnio_(fecha.getFullYear());
   if (delAnio.some(f => mismaFecha_(f, fecha))) return true;
-  return feriadosExtra.some(f => f.year === fecha.getFullYear() && (f.month - 1) === fecha.getMonth() && f.day === fecha.getDate());
+  return feriadosExtra.some(f => f.year === fecha.getFullYear() && f.month === fecha.getMonth() && f.day === fecha.getDate());
 }
 
 function esHabil_(fecha, feriadosExtra) {
@@ -413,15 +389,14 @@ function esHabil_(fecha, feriadosExtra) {
 
 function calcularDiaCobro_(year, month, feriadosExtra) {
   let habiles = 0;
-  for (let dia = 1; dia <= 25; dia++) {
+  for (let dia = 1; dia <= 15; dia++) {
     const fecha = new Date(year, month, dia);
     if (esHabil_(fecha, feriadosExtra)) {
       habiles++;
       if (habiles === 2) return fecha;
     }
   }
-  console.error('No se pudo calcular el día de cobro para ' + year + '-' + (month + 1));
-  return new Date(year, month, 10);
+  throw new Error('No se pudo calcular el día de cobro para ' + year + '-' + (month + 1));
 }
 
 function calcularProximoCobro_(desde, feriadosExtra) {
@@ -454,34 +429,6 @@ function calcularDiasRestantes_(desde, feriadosExtra) {
   return { diaCobro: formatearFechaISO_(cobro), fechas: fechas };
 }
 
-function calcularDiferenciaCierre_(lastProcessedDateStr) {
-  const cfg = leerConfig_();
-  let bolsaActual = getConfigNumero_(cfg, 'bolsaTotal', 0);
-  let hbActual = getConfigNumero_(cfg, 'homeBankingTotal', 0);
-  const feriadosExtra = leerFilas_('Feriados');
-  
-  const ayer = new Date(lastProcessedDateStr + 'T12:00:00');
-  const diasInfo = calcularDiasRestantes_(ayer, feriadosExtra);
-  const ventana = diasInfo.fechas;
-  const liquidHB = hbActual - bolsaActual;
-  
-  let gastosEnVentana = 0;
-  let gastoAyer = 0;
-  const movimientos = leerFilas_('Movimientos');
-  movimientos.forEach(m => {
-    if (m.fromBag) return;
-    const fechas = castValor_('Movimientos', 'fechasAfectadas', m.fechasAfectadas);
-    fechas.forEach(f => {
-      if (ventana.includes(f)) gastosEnVentana += (m.montoPorFecha || 0);
-      if (f === lastProcessedDateStr) gastoAyer += (m.montoPorFecha || 0);
-    });
-  });
-  
-  const objetivoAyer = ventana.length > 0 ? (liquidHB + gastosEnVentana) / ventana.length : 0;
-  const diferencia = objetivoAyer - gastoAyer;
-  return Math.round(diferencia * 100) / 100;
-}
-
 // ============================================================
 // 6. MÓDULO DIARIO
 // ============================================================
@@ -490,33 +437,7 @@ function getEstadoDiario_() {
   const cfg = leerConfig_();
   const feriadosExtra = leerFilas_('Feriados');
   const diasInfo = calcularDiasRestantes_(new Date(), feriadosExtra);
-  
-  const lastProcessed = cfg.lastProcessedDate || formatearFechaISO_(new Date());
-  const hoyStr = formatearFechaISO_(new Date());
-  
-  let cierrePendiente = null;
-  if (lastProcessed && lastProcessed < hoyStr) {
-    const diff = calcularDiferenciaCierre_(lastProcessed);
-    if (Math.abs(diff) < 1) {
-      setConfigValores_({ lastProcessedDate: hoyStr });
-      cfg.lastProcessedDate = hoyStr;
-    } else {
-      cierrePendiente = { tipo: diff > 0 ? 'sobrante' : 'deficit', monto: Math.abs(diff) };
-    }
-  }
-
-  const ventana = [cfg.lastProcessedDate].concat(diasInfo.fechas).filter(Boolean);
-  const minFechaBase = ventana.reduce((a, b) => a < b ? a : b); 
-  const dateMin = new Date(minFechaBase + 'T00:00:00');
-  dateMin.setDate(dateMin.getDate() - 5);
-  const threshold = formatearFechaISO_(dateMin);
-
-  const movimientos = leerFilas_('Movimientos')
-    .map(limpiarFilaParaCliente_)
-    .filter(m => {
-      const fechas = m.fechasAfectadas;
-      return fechas.some(f => f >= threshold);
-    });
+  const movimientos = leerFilas_('Movimientos').map(limpiarFilaParaCliente_);
 
   return {
     homeBankingTotal: getConfigNumero_(cfg, 'homeBankingTotal', 0),
@@ -526,8 +447,7 @@ function getEstadoDiario_() {
     lastProcessedDate: cfg.lastProcessedDate || null,
     diaCobro: diasInfo.diaCobro,
     diasRestantes: diasInfo.fechas,
-    movimientos: movimientos,
-    cierrePendiente: cierrePendiente
+    movimientos: movimientos
   };
 }
 
@@ -576,7 +496,7 @@ function guardarMovimiento_(data) {
     tipo: data.tipo,
     fechasAfectadas: fechas,
     monto: data.monto,
-    montoPorFecha: Math.round((data.monto / fechas.length) * 100) / 100,
+    montoPorFecha: data.monto / fechas.length,
     descripcion: data.descripcion || '',
     usuario: data.usuario,
     fromBag: nuevoFromBag,
@@ -585,12 +505,7 @@ function guardarMovimiento_(data) {
 
   const actualizado = data.id ? actualizarFilaPorId_('Movimientos', id, obj) : false;
   if (!actualizado) agregarFila_('Movimientos', obj);
-  
-  return {
-    movimiento: obj,
-    homeBankingTotal: hbTotal,
-    bolsaTotal: bolsaTotal
-  };
+  return obj;
 }
 
 function eliminarMovimiento_(id) {
@@ -612,13 +527,7 @@ function eliminarMovimiento_(id) {
       bolsaTotal: bolsaTotal
     });
 
-    borrarFilaPorId_('Movimientos', id);
-    
-    return {
-      success: true,
-      homeBankingTotal: hbTotal,
-      bolsaTotal: bolsaTotal
-    };
+    return borrarFilaPorId_('Movimientos', id);
   }
   return false;
 }
@@ -677,24 +586,18 @@ function limpiarMovimientosPendientes_() {
 function resolverCierreDia_(payload) {
   const cfg = leerConfig_();
   let bolsaActual = getConfigNumero_(cfg, 'bolsaTotal', 0);
-  const lastProcessed = cfg.lastProcessedDate;
-  const hoyStr = formatearFechaISO_(new Date());
 
-  if (lastProcessed && lastProcessed < hoyStr) {
-    const diffRounded = calcularDiferenciaCierre_(lastProcessed);
-
-    if (payload.decision === 'bolsa') {
-      if (diffRounded > 0) {
-        bolsaActual += Math.abs(diffRounded);
-      } else {
-        bolsaActual = Math.max(bolsaActual - Math.abs(diffRounded), 0);
-      }
-      setConfigValores_({ bolsaTotal: Math.round(bolsaActual * 100) / 100, lastProcessedDate: hoyStr });
+  if (payload.decision === 'bolsa') {
+    if (payload.tipo === 'sobrante') {
+      bolsaActual += payload.monto;
     } else {
-      setConfigValores_({ lastProcessedDate: hoyStr });
+      bolsaActual = Math.max(bolsaActual - payload.monto, 0);
     }
+    setConfigValores_({ bolsaTotal: bolsaActual });
   }
 
+  const hoyStr = formatearFechaISO_(new Date());
+  setConfigValores_({ lastProcessedDate: hoyStr });
   return { bolsaTotal: bolsaActual, lastProcessedDate: hoyStr };
 }
 
@@ -710,7 +613,6 @@ function actualizarConfig_(cambios) {
 function gastoFijoIniciado_(gasto, year, month) {
   const aY = Number(gasto.activoDesdeYear);
   const aM = Number(gasto.activoDesdeMonth);
-  if (isNaN(aY) || isNaN(aM)) return true;
   if (year < aY) return false;
   if (year === aY && month < aM) return false;
 
@@ -725,7 +627,6 @@ function esGastoFijoPausado_(gasto, year, month) {
   if (gasto.hastaYear !== null && gasto.hastaYear !== undefined && gasto.hastaYear !== '') {
     const hY = Number(gasto.hastaYear);
     const hM = Number(gasto.hastaMonth);
-    if (isNaN(hY) || isNaN(hM)) return false;
     if (year > hY) return true;
     if (year === hY && month > hM) return true;
   }
@@ -807,6 +708,7 @@ function getEstadoMensual_(year, month) {
   };
 }
 
+// TOGGLE MASIVO DE SERVICIOS EN 1 SOLA PETICIÓN HTTP
 function toggleAllServiciosBatch_(year, month, habilitarTodos) {
   const sheet = getSheet_('ServiciosDeshabilitados', true);
   const values = sheet.getDataRange().getValues();
@@ -828,6 +730,7 @@ function toggleAllServiciosBatch_(year, month, habilitarTodos) {
   return true;
 }
 
+// BATCH CONFIGURACIÓN MACRO
 function guardarConfiguracionMacroBatch_(payload) {
   setConfigValores_({
     usdRate: payload.usdRate,
@@ -835,19 +738,12 @@ function guardarConfiguracionMacroBatch_(payload) {
     salaryVirginia: payload.salaryVirginia
   });
 
-  const sheetSrv = getSheet_('ServiciosFijos', true);
-  let dataSrv = sheetSrv.getDataRange().getValues();
-  let headersSrv = dataSrv[0];
-  let filasSrv = leerFilas_('ServiciosFijos');
-
-  const sheetDes = getSheet_('ServiciosDeshabilitados', true);
-  let dataDes = sheetDes.getDataRange().getValues();
-  let filasDes = leerFilas_('ServiciosDeshabilitados');
-
   if (Array.isArray(payload.serviciosEliminados)) {
     payload.serviciosEliminados.forEach(id => {
-      filasSrv = filasSrv.filter(s => String(s.id).trim() !== String(id).trim());
-      filasDes = filasDes.filter(d => String(d.servicioId).trim() !== String(id).trim());
+      borrarFilaPorId_('ServiciosFijos', id);
+      leerFilas_('ServiciosDeshabilitados')
+        .filter(s => String(s.servicioId).trim() === String(id).trim())
+        .forEach(s => borrarFilaPorIndice_('ServiciosDeshabilitados', s._rowIndex));
     });
   }
 
@@ -855,34 +751,10 @@ function guardarConfiguracionMacroBatch_(payload) {
     payload.serviciosFijos.forEach(s => {
       const esNuevo = !s.id || String(s.id).startsWith('srv_');
       const id = esNuevo ? Utilities.getUuid() : s.id;
-      const idx = filasSrv.findIndex(x => String(x.id) === String(id));
       const obj = { id: id, descripcion: s.descripcion, monto: s.monto, moneda: s.moneda || 'ARS' };
-      if (idx >= 0) {
-        filasSrv[idx] = obj;
-      } else {
-        filasSrv.push(obj);
-      }
+      const actualizado = esNuevo ? false : actualizarFilaPorId_('ServiciosFijos', id, obj);
+      if (!actualizado) agregarFila_('ServiciosFijos', obj);
     });
-  }
-
-  if (filasSrv.length > 0) {
-    const outSrv = [headersSrv].concat(filasSrv.map(obj => filaDesdeObjeto_('ServiciosFijos', obj)));
-    sheetSrv.clearContents();
-    sheetSrv.getRange(1, 1, outSrv.length, headersSrv.length).setValues(outSrv);
-  } else {
-    sheetSrv.clearContents();
-    sheetSrv.appendRow(headersSrv);
-  }
-
-  if (filasDes.length > 0) {
-    const headersDes = dataDes[0] || SHEET_SCHEMAS['ServiciosDeshabilitados'].columns;
-    const outDes = [headersDes].concat(filasDes.map(obj => filaDesdeObjeto_('ServiciosDeshabilitados', obj)));
-    sheetDes.clearContents();
-    sheetDes.getRange(1, 1, outDes.length, headersDes.length).setValues(outDes);
-  } else {
-    const headersDes = dataDes[0] || SHEET_SCHEMAS['ServiciosDeshabilitados'].columns;
-    sheetDes.clearContents();
-    sheetDes.appendRow(headersDes);
   }
 
   return getEstadoMensual_(payload.year, payload.month);
@@ -890,49 +762,26 @@ function guardarConfiguracionMacroBatch_(payload) {
 
 function guardarGastoFijo_(data) {
   const id = data.id || Utilities.getUuid();
-  const isDirect = data.isDirect === true || String(data.isDirect).toLowerCase() === 'true' || data.isDirect === 1;
+  const isDirect = !!data.isDirect;
   const units = data.units || 1;
   const unitPrice = data.unitPrice || 0;
   const tipoReal = (data.tipo === 'debt' || data.tipo === 'deuda') ? 'deuda' : 'gasto';
 
-  const filas = leerFilas_('GastosFijos');
-  const existente = data.id ? filas.find(g => String(g.id).trim() === String(data.id).trim()) : null;
-
-  let activoDesdeYear, activoDesdeMonth;
-  if (existente && existente.activoDesdeYear !== null && existente.activoDesdeYear !== undefined && existente.activoDesdeYear !== '') {
-    activoDesdeYear = Number(existente.activoDesdeYear);
-  } else {
-    activoDesdeYear = (data.activoDesdeYear !== undefined && data.activoDesdeYear !== null && data.activoDesdeYear !== '')
-      ? Number(data.activoDesdeYear)
-      : Number(new Date().getFullYear());
-  }
-
-  if (existente && existente.activoDesdeMonth !== null && existente.activoDesdeMonth !== undefined && existente.activoDesdeMonth !== '') {
-    activoDesdeMonth = Number(existente.activoDesdeMonth);
-  } else {
-    activoDesdeMonth = (data.activoDesdeMonth !== undefined && data.activoDesdeMonth !== null && data.activoDesdeMonth !== '')
-      ? Number(data.activoDesdeMonth)
-      : 0;
-  }
-
-  const hastaYear = (data.hastaYear !== undefined) ? data.hastaYear : (existente ? existente.hastaYear : null);
-  const hastaMonth = (data.hastaMonth !== undefined) ? data.hastaMonth : (existente ? existente.hastaMonth : null);
-
   const obj = {
     id: id,
-    usuario: data.usuario || (existente ? existente.usuario : ''),
-    descripcion: data.descripcion || (existente ? existente.descripcion : ''),
+    usuario: data.usuario,
+    descripcion: data.descripcion,
     tipo: tipoReal,
     isDirect: isDirect,
     units: units,
     unitPrice: unitPrice,
     monto: isDirect ? data.monto : units * unitPrice,
     moneda: data.moneda || 'ARS',
-    activoDesdeYear: activoDesdeYear,
-    activoDesdeMonth: activoDesdeMonth,
+    activoDesdeYear: data.activoDesdeYear,
+    activoDesdeMonth: data.activoDesdeMonth,
     cuotasTotales: data.cuotasTotales || null,
-    hastaYear: (hastaYear !== '' && hastaYear !== undefined && hastaYear !== null) ? Number(hastaYear) : null,
-    hastaMonth: (hastaMonth !== '' && hastaMonth !== undefined && hastaMonth !== null) ? Number(hastaMonth) : null
+    hastaYear: data.hastaYear !== undefined ? data.hastaYear : null,
+    hastaMonth: data.hastaMonth !== undefined ? data.hastaMonth : null
   };
   const actualizado = data.id ? actualizarFilaPorId_('GastosFijos', id, obj) : false;
   if (!actualizado) agregarFila_('GastosFijos', obj);
