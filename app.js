@@ -616,7 +616,8 @@ async function chequearCierreDia_() {
   const gastoAyer = gastosPorFecha[appState.lastProcessedDate] || 0;
   const diferencia = objetivoAyer - gastoAyer;
 
-  if (Math.abs(diferencia) < 1) {
+  // Se bajó el umbral a 0.01 para forzar la apertura del modal ante cualquier sobrante o déficit
+  if (Math.abs(diferencia) < 0.01) {
     const resultado = await callBackendConSync('resolverCierreDia', { decision: 'redistribuir', tipo: 'sobrante', monto: 0 });
     appState.lastProcessedDate = resultado.lastProcessedDate;
     return;
@@ -982,6 +983,7 @@ async function recargarEstadoMensual_() {
   }
 }
 
+// NAVEGACIÓN DEL CARRUSEL MENSUAL: Sincronización Optimista
 function changeMonth(delta) {
   let m = appState.currentMacroMonth + delta;
   let y = appState.currentMacroYear;
@@ -989,6 +991,13 @@ function changeMonth(delta) {
   if (m > 11) { m = 0; y++; }
   appState.currentMacroMonth = m;
   appState.currentMacroYear = y;
+
+  // Actualización optimista inmediata del header del mes en la interfaz
+  const monthDisplay = document.getElementById('current-month-display');
+  if (monthDisplay) {
+    monthDisplay.textContent = NOMBRES_MESES[m] + ' ' + y;
+  }
+
   recargarEstadoMensual_();
 }
 
@@ -1570,10 +1579,6 @@ function openFixedExpenseModal(user, expenseId) {
   form.reset();
 
   const chkDirect = document.getElementById('chk-fixed-is-direct');
-  if (chkDirect) {
-    chkDirect.checked = true;
-    toggleFixedMode(true);
-  }
 
   attachMoneyInput('fixed-amount', () => {});
   attachMoneyInput('fixed-unit-price', () => updateFixedTotalFromUnits());
@@ -1590,7 +1595,12 @@ function openFixedExpenseModal(user, expenseId) {
       document.getElementById('fixed-desc').value = g.descripcion || '';
       document.getElementById('fixed-currency').value = g.moneda || 'ARS';
 
-      const isDirect = (g.isDirect !== undefined) ? g.isDirect : true;
+      // EVALUACIÓN DE ISDIRECT: Se respeta el booleano o cadena booleana real
+      let isDirect = true;
+      if (g.isDirect !== undefined && g.isDirect !== null) {
+        isDirect = (g.isDirect === true || g.isDirect === 'true' || g.isDirect === 1 || g.isDirect === '1');
+      }
+
       if (chkDirect) chkDirect.checked = isDirect;
       toggleFixedMode(isDirect);
 
@@ -1625,6 +1635,8 @@ function openFixedExpenseModal(user, expenseId) {
       }
     }
   } else {
+    if (chkDirect) chkDirect.checked = true;
+    toggleFixedMode(true);
     setMoneyValue('fixed-amount', 0);
     setMoneyValue('fixed-unit-price', 0);
     document.getElementById('fixed-units').value = 1;
@@ -1705,6 +1717,10 @@ function handleFixedExpenseSubmit() {
   }
 
   if (replicate) {
+    const existingItem = (appState.macroData && appState.macroData.gastosFijos || []).find(x => String(x.id) === String(currentEditingFixedExpenseId));
+    const activeY = existingItem ? existingItem.activoDesdeYear : appState.currentMacroYear;
+    const activeM = existingItem ? existingItem.activoDesdeMonth : appState.currentMacroMonth;
+
     callBackendBackground('guardarGastoFijo', {
       id: currentEditingFixedExpenseId,
       usuario: currentEditingFixedExpenseUser,
@@ -1715,10 +1731,10 @@ function handleFixedExpenseSubmit() {
       unitPrice: isDirect ? monto : unitPrice,
       monto: monto,
       moneda: moneda,
-      activoDesdeYear: appState.currentMacroYear,
-      activoDesdeMonth: appState.currentMacroMonth,
-      hastaYear: null,
-      hastaMonth: null
+      activoDesdeYear: activeY,
+      activoDesdeMonth: activeM,
+      hastaYear: existingItem ? existingItem.hastaYear : null,
+      hastaMonth: existingItem ? existingItem.hastaMonth : null
     });
   } else {
     callBackendBackground('guardarExcepcionGastoFijo', {
