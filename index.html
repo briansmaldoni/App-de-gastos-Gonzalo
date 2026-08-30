@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Multimillonarios Finance - Brian & Virginia</title>
+  <title>Multimillonarios Finance - Gonzalo & Elisa</title>
   
   <!-- Vinculación PWA Standalone -->
   <link rel="manifest" href="manifest.json">
@@ -18,7 +18,7 @@
   <!-- Script anti-parpadeo -->
   <script>
     (function() {
-      const activeUser = localStorage.getItem('userActive') || 'Brian';
+      const activeUser = localStorage.getItem('userActive') || 'Gonzalo';
       const savedColor = localStorage.getItem('accentColor_' + activeUser) || '#18181b';
       document.documentElement.style.setProperty('--accent-color', savedColor);
     })();
@@ -49,8 +49,8 @@
     <header class="flex justify-between items-center mb-3 pt-1">
       <div>
         <div class="flex items-center gap-1.5 bg-zinc-200/70 p-1 rounded-xl w-fit mb-1">
-          <button id="user-btn-brian" onclick="setActiveUser('Brian')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all">Brian</button>
-          <button id="user-btn-virginia" onclick="setActiveUser('Virginia')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all">Virginia</button>
+          <button id="user-btn-Gonzalo" onclick="setActiveUser('Gonzalo')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all">Gonzalo</button>
+          <button id="user-btn-Elisa" onclick="setActiveUser('Elisa')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all">Elisa</button>
         </div>
         <p class="text-[10px] text-zinc-400 font-medium">Sincronizado en tiempo real</p>
       </div>
@@ -153,7 +153,7 @@
         </button>
 
         <div id="view-macro-prize-card">
-          <button onclick="openValueEditModal('prize-brian')" class="w-full bento-card p-3 bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-300 flex justify-between items-center transition-colors shadow-sm">
+          <button onclick="openValueEditModal('prize-Gonzalo')" class="w-full bento-card p-3 bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-300 flex justify-between items-center transition-colors shadow-sm">
             <span id="macro-prize-label" class="text-[9px] bg-emerald-200 text-emerald-900 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">✦ PREMIO VARIABLE Y AJUSTES</span>
             <span class="text-xs font-black text-emerald-950" id="macro-prize-display">$ 0,00</span>
           </button>
@@ -246,22 +246,22 @@
           <div class="flex justify-between items-center border-b border-zinc-100 pb-2">
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-              <span class="text-xs font-bold text-zinc-800">Gastos Fijos de Brian</span>
+              <span class="text-xs font-bold text-zinc-800">Gastos Fijos de Gonzalo</span>
             </div>
-            <button onclick="openFixedExpenseModal('Brian')" class="text-xs text-blue-600 font-bold hover:underline">+ Agregar</button>
+            <button onclick="openFixedExpenseModal('Gonzalo')" class="text-xs text-blue-600 font-bold hover:underline">+ Agregar</button>
           </div>
-          <div id="brian-fixed-list" class="space-y-1.5 text-xs text-zinc-700"></div>
+          <div id="Gonzalo-fixed-list" class="space-y-1.5 text-xs text-zinc-700"></div>
         </div>
 
         <div class="bento-card p-3.5 space-y-2">
           <div class="flex justify-between items-center border-b border-zinc-100 pb-2">
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-purple-600"></span>
-              <span class="text-xs font-bold text-zinc-800">Gastos Fijos de Virginia</span>
+              <span class="text-xs font-bold text-zinc-800">Gastos Fijos de Elisa</span>
             </div>
-            <button onclick="openFixedExpenseModal('Virginia')" class="text-xs text-purple-600 font-bold hover:underline">+ Agregar</button>
+            <button onclick="openFixedExpenseModal('Elisa')" class="text-xs text-purple-600 font-bold hover:underline">+ Agregar</button>
           </div>
-          <div id="virginia-fixed-list" class="space-y-1.5 text-xs text-zinc-700"></div>
+          <div id="Elisa-fixed-list" class="space-y-1.5 text-xs text-zinc-700"></div>
         </div>
       </section>
     </main>
@@ -320,27 +320,27 @@
             <svg class="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
           </button>
 
-          <button onclick="quickAddFixedExpense('Brian')" class="quick-add-row text-left">
+          <button onclick="quickAddFixedExpense('Gonzalo')" class="quick-add-row text-left">
             <span class="quick-add-icon" style="background:#dbeafe; color:#1d4ed8;">
               <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21a8 8 0 1 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>
               </svg>
             </span>
             <span class="flex-1">
-              <span class="block text-xs font-bold text-zinc-800">Gasto Fijo · Brian</span>
+              <span class="block text-xs font-bold text-zinc-800">Gasto Fijo · Gonzalo</span>
               <span class="block text-[10px] text-zinc-400">O deuda a favor</span>
             </span>
             <svg class="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
           </button>
 
-          <button onclick="quickAddFixedExpense('Virginia')" class="quick-add-row text-left">
+          <button onclick="quickAddFixedExpense('Elisa')" class="quick-add-row text-left">
             <span class="quick-add-icon" style="background:#f3e8ff; color:#7e22ce;">
               <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21a8 8 0 1 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>
               </svg>
             </span>
             <span class="flex-1">
-              <span class="block text-xs font-bold text-zinc-800">Gasto Fijo · Virginia</span>
+              <span class="block text-xs font-bold text-zinc-800">Gasto Fijo · Elisa</span>
               <span class="block text-[10px] text-zinc-400">O deuda a favor</span>
             </span>
             <svg class="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
@@ -440,7 +440,7 @@
     <div id="fixed-expense-modal" class="modal-overlay fixed inset-0 z-[60] flex items-end justify-center" onclick="handleOverlayClick(event)">
       <div class="modal-sheet w-full max-w-md p-5 space-y-3.5" onclick="event.stopPropagation()">
         <div class="flex justify-between items-center pb-2 border-b border-zinc-100">
-          <h3 class="text-sm font-bold text-zinc-900">Gasto Fijo (<span id="fixed-user-label">Brian</span>)</h3>
+          <h3 class="text-sm font-bold text-zinc-900">Gasto Fijo (<span id="fixed-user-label">Gonzalo</span>)</h3>
           <button onclick="toggleFixedExpenseModal(false)" class="text-zinc-400 p-1">✕</button>
         </div>
         <form id="fixed-expense-form" class="space-y-3 pt-1">
@@ -510,7 +510,7 @@
     <div id="tx-modal" class="modal-overlay fixed inset-0 z-50 flex items-end justify-center" onclick="handleOverlayClick(event)">
       <div class="modal-sheet w-full max-w-md p-5 space-y-3.5" onclick="event.stopPropagation()">
         <div class="flex justify-between items-center pb-2 border-b border-zinc-100">
-          <h3 class="text-sm font-bold text-zinc-900">Registrar Movimiento (<span id="modal-user-label">Brian</span>)</h3>
+          <h3 class="text-sm font-bold text-zinc-900">Registrar Movimiento (<span id="modal-user-label">Gonzalo</span>)</h3>
           <div class="flex items-center gap-2">
             <button type="button" onclick="resetCurrentTabOnly()" class="text-xs text-rose-500 font-semibold hover:underline">Limpiar</button>
             <button onclick="toggleModal(false)" class="text-zinc-400 hover:text-zinc-700 p-1">✕</button>
@@ -671,19 +671,19 @@
         </div>
         <div class="space-y-1.5">
           <span class="text-xs font-bold text-zinc-800 block">Sueldos Fijos</span>
-          <div onclick="openValueEditModal('salary-brian')" class="flex justify-between items-center p-2.5 bg-white hover:bg-zinc-100 rounded-xl cursor-pointer transition-colors border border-zinc-200/80">
+          <div onclick="openValueEditModal('salary-Gonzalo')" class="flex justify-between items-center p-2.5 bg-white hover:bg-zinc-100 rounded-xl cursor-pointer transition-colors border border-zinc-200/80">
             <div>
-              <p class="font-bold text-zinc-800 text-xs">Sueldo Brian</p>
+              <p class="font-bold text-zinc-800 text-xs">Sueldo Gonzalo</p>
               <p class="text-[9px] text-zinc-400 font-medium">Ingreso fijo mensual</p>
             </div>
-            <span class="font-black text-xs text-zinc-900" id="display-salary-brian">$ 0,00</span>
+            <span class="font-black text-xs text-zinc-900" id="display-salary-Gonzalo">$ 0,00</span>
           </div>
-          <div onclick="openValueEditModal('salary-virginia')" class="flex justify-between items-center p-2.5 bg-white hover:bg-zinc-100 rounded-xl cursor-pointer transition-colors border border-zinc-200/80">
+          <div onclick="openValueEditModal('salary-Elisa')" class="flex justify-between items-center p-2.5 bg-white hover:bg-zinc-100 rounded-xl cursor-pointer transition-colors border border-zinc-200/80">
             <div>
-              <p class="font-bold text-zinc-800 text-xs">Sueldo Virginia</p>
+              <p class="font-bold text-zinc-800 text-xs">Sueldo Elisa</p>
               <p class="text-[9px] text-zinc-400 font-medium">Ingreso fijo mensual</p>
             </div>
-            <span class="font-black text-xs text-zinc-900" id="display-salary-virginia">$ 0,00</span>
+            <span class="font-black text-xs text-zinc-900" id="display-salary-Elisa">$ 0,00</span>
           </div>
         </div>
         <div class="space-y-2 pt-1 border-t border-zinc-100">
