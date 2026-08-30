@@ -1,18 +1,14 @@
 /**
  * ============================================================
- * MULTIMILLONARIOS FINANCE — FRONTEND COMPLETO CON OPTIMISTIC UI (app.js)
+ * MINIMAL FINANCE — FRONTEND COMPLETO CON OPTIMISTIC UI (app.js)
  * Motor Diario (Vista Micro) + Proyección Mensual (Vista Macro)
  * ============================================================
  */
 
 // ============================================================
-// CONFIGURACIÓN DE CONEXIÓN AL BACKEND & SERVICE WORKER
+// CONFIGURACIÓN DE CONEXIÓN AL BACKEND
 // ============================================================
 const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwXrTj_gDl5Pc72Ay6gnWxypF3JJhrZIMk93SMOy7dEnHZG-15kuppMfH1nGmctCpTjBw/exec';
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Error:', err));
-}
 
 // ============================================================
 // ESTADO GLOBAL Y SINCRONIZACIÓN EN SEGUNDO PLANO
@@ -28,6 +24,7 @@ const appState = {
   movimientos: [],
   lastProcessedDate: null,
   
+  // Estado para la Proyección Mensual (Macro)
   currentMacroYear: new Date().getFullYear(),
   currentMacroMonth: new Date().getMonth(),
   macroData: null
@@ -39,15 +36,20 @@ let cierreDiaPendiente = null;
 let limpiarColaCandidatos = [];
 
 let hbModalState = { hb: 0, objetivo: 0, bolsa: 0, diasCount: 0, lastEdited: 'objetivo' };
+
+// Borrador local para el modal Sueldos y Servicios (Macro Config)
 let macroDraft = null;
+
+// Variables temporales para modales de edición Macro
 let currentEditingValueTarget = null;
 let currentEditingServiceId = null;
 let currentEditingFixedExpenseId = null;
 let currentEditingFixedExpenseUser = 'Brian';
+
 let pendingSyncCount = 0;
 
 // ============================================================
-// CLIENTE DE API (Apps Script) & BACKGROUND SYNC SEGURO
+// CLIENTE DE API (Apps Script) & BACKGROUND SYNC
 // ============================================================
 
 async function callBackend(action, payload) {
@@ -56,17 +58,6 @@ async function callBackend(action, payload) {
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action: action, payload: payload || {} })
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error('Error HTTP ' + res.status + ': ' + text.substring(0, 100));
-  }
-  
-  const contentType = res.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    throw new Error('Respuesta no JSON del servidor. Puede ser un error de permisos en Apps Script.');
-  }
-
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || ('Error en ' + action));
   return json.data;
@@ -363,9 +354,7 @@ function calcularComposicion_() {
     });
   });
 
-  let objetivoBase = dias.length > 0 ? ((liquidHB + gastosEnPeriodo) / dias.length) : 0;
-  objetivoBase = Math.round(objetivoBase * 100) / 100;
-  
+  const objetivoBase = dias.length > 0 ? (liquidHB + gastosEnPeriodo) / dias.length : 0;
   return { objetivoBase: objetivoBase, gastosPorFecha: gastosPorFecha };
 }
 
@@ -403,19 +392,19 @@ function renderTransactionList_() {
   const cont = document.getElementById('transaction-list');
   if (!cont) return;
   const hoyStr = hoyISO_();
+  const diasPeriodo = appState.diasRestantes || [];
 
-  if (!appState.movimientos || !appState.movimientos.length) {
+  const delPeriodo = appState.movimientos.filter(m => {
+    const fechas = normalizarFechas_(m.fechasAfectadas);
+    return fechas.some(f => diasPeriodo.includes(f) || f >= hoyStr);
+  });
+
+  if (!delPeriodo.length) {
     cont.innerHTML = '<p class="text-[11px] text-zinc-400 text-center py-3">Sin movimientos registrados</p>';
     return;
   }
 
-  const listaOrdenada = appState.movimientos.slice().sort((a, b) => {
-    const fA = normalizarFechas_(a.fechasAfectadas)[0] || '';
-    const fB = normalizarFechas_(b.fechasAfectadas)[0] || '';
-    return fB.localeCompare(fA);
-  });
-
-  cont.innerHTML = listaOrdenada.map(m => {
+  cont.innerHTML = delPeriodo.map(m => {
     const titulo = m.descripcion || (m.tipo === 'divisible' ? 'Gasto divisible' : 'Gasto único');
     const fechas = normalizarFechas_(m.fechasAfectadas);
     
@@ -542,7 +531,7 @@ async function handleLimpiarPendientes() {
     limpiarColaCandidatos = (resultado.candidatos || []).slice();
     procesarSiguienteCandidato_();
   } catch (e) {
-    alert('Error al limpiar movimientos: ' + e.message);
+    alert('Error al limpiar movimientos');
   } finally {
     ocultarSyncToast_();
   }
@@ -575,11 +564,10 @@ async function resolverCandidatoLimpiar(accion) {
 
   mostrarSyncToast_();
   try {
-    let res;
     if (accion === 'borrar') {
-      res = await callBackend('eliminarMovimiento', { id: candidato.id });
+      await callBackend('eliminarMovimiento', { id: candidato.id });
     } else if (accion === 'single') {
-      res = await callBackend('guardarMovimiento', {
+      await callBackend('guardarMovimiento', {
         id: candidato.id,
         tipo: 'single',
         fechasAfectadas: [hoyISO_()],
@@ -589,16 +577,9 @@ async function resolverCandidatoLimpiar(accion) {
         fromBag: candidato.fromBag
       });
     }
-
-    appState.movimientos = appState.movimientos.filter(m => String(m.id) !== String(candidato.id));
-    if (res && res.movimiento) appState.movimientos.push(res.movimiento);
-    if (res && res.homeBankingTotal !== undefined) {
-      appState.homeBankingTotal = res.homeBankingTotal;
-      appState.bolsaTotal = res.bolsaTotal;
-    }
-    renderMicroView();
+    await recargarEstadoDiario_(false);
   } catch (e) {
-    alert('Error al procesar candidato: ' + e.message);
+    alert('Error al procesar candidato');
   } finally {
     ocultarSyncToast_();
     procesarSiguienteCandidato_();
@@ -609,8 +590,43 @@ async function resolverCandidatoLimpiar(accion) {
 // CIERRE DE DÍA
 // ============================================================
 
+async function chequearCierreDia_() {
+  const hoyStr = hoyISO_();
+  if (!appState.lastProcessedDate || appState.lastProcessedDate === hoyStr) return;
+  if (appState.lastProcessedDate > hoyStr) return;
+
+  const ventana = [appState.lastProcessedDate].concat(appState.diasRestantes);
+  const liquidHB = appState.homeBankingTotal - appState.bolsaTotal;
+  const gastosPorFecha = {};
+  ventana.forEach(f => { gastosPorFecha[f] = 0; });
+
+  let gastosEnVentana = 0;
+  appState.movimientos.forEach(m => {
+    if (m.fromBag) return;
+    const fechas = normalizarFechas_(m.fechasAfectadas);
+    fechas.forEach(f => {
+      if (Object.prototype.hasOwnProperty.call(gastosPorFecha, f)) {
+        gastosPorFecha[f] += m.montoPorFecha;
+        gastosEnVentana += m.montoPorFecha;
+      }
+    });
+  });
+
+  const objetivoAyer = ventana.length > 0 ? (liquidHB + gastosEnVentana) / ventana.length : 0;
+  const gastoAyer = gastosPorFecha[appState.lastProcessedDate] || 0;
+  const diferencia = objetivoAyer - gastoAyer;
+
+  if (Math.abs(diferencia) < 1) {
+    const resultado = await callBackendConSync('resolverCierreDia', { decision: 'redistribuir', tipo: 'sobrante', monto: 0 });
+    appState.lastProcessedDate = resultado.lastProcessedDate;
+    return;
+  }
+
+  cierreDiaPendiente = { tipo: diferencia > 0 ? 'sobrante' : 'deficit', monto: Math.abs(diferencia) };
+  mostrarModalCierreDia_(cierreDiaPendiente);
+}
+
 function mostrarModalCierreDia_(info) {
-  if (!info) return;
   const esDeficit = info.tipo === 'deficit';
   document.getElementById('day-change-title').textContent = esDeficit ? '📉 Día anterior en rojo' : '☀️ ¡Nuevo Día Detectado!';
   document.getElementById('day-change-desc').innerHTML = esDeficit
@@ -629,15 +645,17 @@ async function resolveDayChange(decision) {
   mostrarSyncToast_();
   try {
     const resultado = await callBackend('resolverCierreDia', {
-      decision: decision === 'bag' ? 'bolsa' : 'redistribuir'
+      decision: decision === 'bag' ? 'bolsa' : 'redistribuir',
+      tipo: info.tipo,
+      monto: info.monto
     });
 
     appState.bolsaTotal = resultado.bolsaTotal;
     appState.lastProcessedDate = resultado.lastProcessedDate;
     cierreDiaPendiente = null;
-    renderMicroView();
+    await recargarEstadoDiario_(false);
   } catch (e) {
-    alert('Error al cerrar día: ' + e.message);
+    alert('Error al cerrar día');
   } finally {
     ocultarSyncToast_();
   }
@@ -740,25 +758,33 @@ async function handleFormSubmit() {
   const fromBag = document.getElementById('chk-from-bag').checked;
   let fechasAfectadas = [];
 
-  try {
-    if (txModalSubtype === 'single') {
-      const fecha = document.getElementById('tx-assigned-date').value || hoyISO_();
-      fechasAfectadas = [fecha];
-    } else {
-      const diasCount = parseInt(document.getElementById('tx-days-count').value, 10);
-      const fechaInicio = document.getElementById('tx-divisible-start-date').value;
-      const customDaysRaw = document.getElementById('tx-custom-days').value.trim();
+  if (txModalSubtype === 'single') {
+    const fecha = document.getElementById('tx-assigned-date').value || hoyISO_();
+    fechasAfectadas = [fecha];
+  } else {
+    const diasCount = parseInt(document.getElementById('tx-days-count').value, 10);
+    const fechaInicio = document.getElementById('tx-divisible-start-date').value;
+    const customDaysRaw = document.getElementById('tx-custom-days').value.trim();
 
-      if (customDaysRaw) {
-        const base = fechaInicio ? new Date(fechaInicio + 'T00:00:00') : new Date();
-        let currentMonth = base.getMonth();
-        let currentYear = base.getFullYear();
-        let lastDay = 0;
+    if (customDaysRaw) {
+      const base = fechaInicio ? new Date(fechaInicio + 'T00:00:00') : new Date();
+      let currentMonth = base.getMonth();
+      let currentYear = base.getFullYear();
+      let lastDay = 0;
 
-        const rawDays = customDaysRaw.split(',').map(s => parseInt(s.trim(), 10)).filter(dia => !isNaN(dia));
-
-        fechasAfectadas = rawDays.map(dia => {
-          if (dia < 1 || dia > 31) throw new Error(`El día ${dia} es inválido. Debe estar entre 1 y 31.`);
+      fechasAfectadas = customDaysRaw.split(',')
+        .map(s => parseInt(s.trim(), 10))
+        .filter(dia => !isNaN(dia))
+        .map(dia => {
+          const enDiasRestantes = (appState.diasRestantes || []).find(fStr => {
+            const p = fStr.split('-').map(Number);
+            return p[2] === dia;
+          });
+          if (enDiasRestantes) {
+            const p = enDiasRestantes.split('-').map(Number);
+            lastDay = p[2];
+            return enDiasRestantes;
+          }
 
           if (dia < lastDay || (lastDay === 0 && dia < base.getDate())) {
             currentMonth++;
@@ -767,38 +793,31 @@ async function handleFormSubmit() {
               currentYear++;
             }
           }
-
-          const maxDays = new Date(currentYear, currentMonth + 1, 0).getDate();
-          if (dia > maxDays) throw new Error(`El mes ${currentMonth + 1} no tiene ${dia} días.`);
-
           lastDay = dia;
           return formatearFechaISOLocal_(new Date(currentYear, currentMonth, dia));
         });
-      } else if (diasCount && fechaInicio) {
-        const base = new Date(fechaInicio + 'T00:00:00');
-        for (let i = 0; i < diasCount; i++) {
-          fechasAfectadas.push(formatearFechaISOLocal_(new Date(base.getFullYear(), base.getMonth(), base.getDate() + i)));
-        }
-      } else {
-        fechasAfectadas = appState.diasRestantes.slice();
+    } else if (diasCount && fechaInicio) {
+      const base = new Date(fechaInicio + 'T00:00:00');
+      for (let i = 0; i < diasCount; i++) {
+        fechasAfectadas.push(formatearFechaISOLocal_(new Date(base.getFullYear(), base.getMonth(), base.getDate() + i)));
       }
+    } else {
+      fechasAfectadas = appState.diasRestantes.slice();
     }
-  } catch (err) {
-    alert(err.message);
-    return;
   }
 
   if (!fechasAfectadas.length) { alert('Faltan fechas para este gasto'); return; }
 
   toggleModal(false);
   
+  // Update Optimista
   const idMov = editingMovimientoId || ('tx_' + Date.now());
   const nuevoMov = {
     id: idMov,
     tipo: txModalSubtype,
     fechasAfectadas: fechasAfectadas,
     monto: monto,
-    montoPorFecha: Math.round((monto / fechasAfectadas.length) * 100) / 100,
+    montoPorFecha: monto / fechasAfectadas.length,
     descripcion: descripcion,
     usuario: appState.activeUser,
     fromBag: fromBag
@@ -827,17 +846,7 @@ async function handleFormSubmit() {
     descripcion: descripcion,
     usuario: appState.activeUser,
     fromBag: fromBag
-  }).then(res => {
-    if (res && res.movimiento && !editingMovimientoId) {
-      const idx = appState.movimientos.findIndex(x => String(x.id) === String(idMov));
-      if (idx !== -1) appState.movimientos[idx].id = res.movimiento.id;
-    }
-    if (res && res.homeBankingTotal !== undefined) {
-      appState.homeBankingTotal = res.homeBankingTotal;
-      appState.bolsaTotal = res.bolsaTotal;
-      renderMicroView();
-    }
-  });
+  }).then(() => recargarEstadoDiario_(false));
 }
 
 async function deleteCurrentEditingTransaction() {
@@ -852,13 +861,8 @@ async function deleteCurrentEditingTransaction() {
     renderMicroView();
   }
 
-  callBackendBackground('eliminarMovimiento', { id: editingMovimientoId }).then(res => {
-    if (res && res.homeBankingTotal !== undefined) {
-      appState.homeBankingTotal = res.homeBankingTotal;
-      appState.bolsaTotal = res.bolsaTotal;
-      renderMicroView();
-    }
-  });
+  callBackendBackground('eliminarMovimiento', { id: editingMovimientoId })
+    .then(() => recargarEstadoDiario_(false));
 }
 
 // ============================================================
@@ -870,7 +874,7 @@ async function triggerSyncReload() {
   try {
     await recargarEstadoDiario_(false);
   } catch (e) {
-    alert('Error de sincronización: ' + e.message);
+    alert('Error de sincronización');
   } finally {
     ocultarSyncToast_();
   }
@@ -985,29 +989,20 @@ function changeMonth(delta) {
   if (m > 11) { m = 0; y++; }
   appState.currentMacroMonth = m;
   appState.currentMacroYear = y;
-
-  const monthDisplay = document.getElementById('current-month-display');
-  if (monthDisplay) {
-    monthDisplay.textContent = NOMBRES_MESES[m] + ' ' + y;
-  }
-
-  callBackendBackground('getEstadoMensual', { year: y, month: m }).then(data => {
-    if (data && data.year === appState.currentMacroYear && data.month === appState.currentMacroMonth) {
-      appState.macroData = data;
-      renderMacroView();
-    }
-  });
+  recargarEstadoMensual_();
 }
 
 function renderMacroView() {
   const data = appState.macroData;
   if (!data) return;
 
+  // Header del Mes
   const monthDisplay = document.getElementById('current-month-display');
   if (monthDisplay) {
     monthDisplay.textContent = NOMBRES_MESES[data.month] + ' ' + data.year;
   }
 
+  // Badges SAC y Premio / Ajuste
   const esSacMonth = (data.month === 5 || data.month === 11);
   const esPrizeMonth = (data.month === 1 || data.month === 4 || data.month === 7 || data.month === 10);
 
@@ -1031,6 +1026,7 @@ function renderMacroView() {
 
   const usdRate = data.usdRate || 1;
 
+  // Calculo de SAC
   let sacCalculado = 0;
   if (esSacMonth) {
     const sacB = data.sacBrian !== null ? data.sacBrian : (data.salaryBrian / 2);
@@ -1040,26 +1036,31 @@ function renderMacroView() {
     if (sacDisplay) sacDisplay.textContent = formatearMoneda_(sacCalculado);
   }
 
+  // Calculo de Premio / Ajuste
   let premioCalculado = data.premio || 0;
   const prizeDisplay = document.getElementById('macro-prize-display');
   if (prizeDisplay) prizeDisplay.textContent = formatearMoneda_(premioCalculado);
 
+  // Deudas a Favor (Ingresos)
   const deudas = (data.gastosFijos || []).filter(g => g.tipo === 'deuda');
   let totalDeudasARS = 0;
   deudas.forEach(d => {
     totalDeudasARS += d.moneda === 'USD' ? (d.monto * usdRate) : d.monto;
   });
 
+  // Total Ingresos
   const totalIngresos = data.salaryBrian + data.salaryVirginia + sacCalculado + premioCalculado + totalDeudasARS;
   const incomeTotalEl = document.getElementById('macro-income-total');
   if (incomeTotalEl) incomeTotalEl.textContent = formatearMoneda_(totalIngresos);
 
+  // Gastos Fijos (Excluyendo Deudas)
   const gastosFijos = (data.gastosFijos || []).filter(g => g.tipo === 'gasto');
   let totalGastosFijosARS = 0;
   gastosFijos.forEach(g => {
     totalGastosFijosARS += g.moneda === 'USD' ? (g.monto * usdRate) : g.monto;
   });
 
+  // Servicios Habilitados
   const deshabilitados = data.serviciosDeshabilitadosEsteMes || [];
   const serviciosHabilitados = (data.serviciosFijos || []).filter(s => !deshabilitados.includes(s.id));
   let totalServiciosARS = 0;
@@ -1067,10 +1068,12 @@ function renderMacroView() {
     totalServiciosARS += s.moneda === 'USD' ? (s.monto * usdRate) : s.monto;
   });
 
+  // Total Gastos
   const totalGastos = totalGastosFijosARS + totalServiciosARS;
   const expensesTotalEl = document.getElementById('macro-expenses-total');
   if (expensesTotalEl) expensesTotalEl.textContent = formatearMoneda_(totalGastos);
 
+  // Resto Neto
   const restoNeto = totalIngresos - totalGastos;
   const balanceDisplay = document.getElementById('macro-net-balance-display');
   const statusBadge = document.getElementById('macro-net-status-badge');
@@ -1086,6 +1089,7 @@ function renderMacroView() {
     }
   }
 
+  // Renders de listas desglosadas
   renderMacroIncomesList_(data, sacCalculado, premioCalculado, deudas, usdRate);
   renderMacroExpensesList_(gastosFijos, serviciosHabilitados, usdRate);
   renderMacroServicesToggleList_(data.serviciosFijos || [], deshabilitados, usdRate);
@@ -1213,6 +1217,7 @@ function renderMacroFixedExpensesLists_(gastosFijos, usdRate) {
   }
 }
 
+// Colapsables de Vista Macro
 function toggleIncomesCollapse() {
   const content = document.getElementById('incomes-collapse-content');
   const arrow = document.getElementById('incomes-collapse-arrow');
@@ -1241,9 +1246,11 @@ function toggleDebtsCollapse() {
   if (arrow) arrow.classList.toggle('rotate-180');
 }
 
+// TOGGLE SERVICIO INDIVIDUAL CON UI OPTIMISTA
 function toggleServicioStatus(servicioId, habilitado) {
   if (!appState.macroData) return;
 
+  // 1. UI Optimista
   let deshabilitados = appState.macroData.serviciosDeshabilitadosEsteMes || [];
   if (habilitado) {
     deshabilitados = deshabilitados.filter(id => String(id) !== String(servicioId));
@@ -1255,6 +1262,7 @@ function toggleServicioStatus(servicioId, habilitado) {
   appState.macroData.serviciosDeshabilitadosEsteMes = deshabilitados;
   renderMacroView();
 
+  // 2. Sync en segundo plano
   callBackendBackground('toggleServicio', {
     servicioId: servicioId,
     year: appState.currentMacroYear,
@@ -1263,6 +1271,7 @@ function toggleServicioStatus(servicioId, habilitado) {
   });
 }
 
+// TOGGLE MASIVO CON BATCH BKG Y UI OPTIMISTA
 function toggleAllServicesCheckboxes(e) {
   e.stopPropagation();
   const data = appState.macroData;
@@ -1272,6 +1281,7 @@ function toggleAllServicesCheckboxes(e) {
   const hayHabilitados = data.serviciosFijos.some(s => !deshabilitados.includes(s.id));
   const nuevoEstadoHabilitar = !hayHabilitados;
 
+  // 1. UI Optimista Instantánea
   if (nuevoEstadoHabilitar) {
     data.serviciosDeshabilitadosEsteMes = [];
   } else {
@@ -1279,6 +1289,7 @@ function toggleAllServicesCheckboxes(e) {
   }
   renderMacroView();
 
+  // 2. Sync BATCH en 1 sola petición HTTP en segundo plano
   callBackendBackground('toggleAllServiciosBatch', {
     year: appState.currentMacroYear,
     month: appState.currentMacroMonth,
@@ -1287,7 +1298,7 @@ function toggleAllServicesCheckboxes(e) {
 }
 
 // ============================================================
-// MODALES Y ACCIONES MACRO
+// MODALES Y ACCIONES MACRO (PROYECCIÓN MENSUAL Y BORRADOR)
 // ============================================================
 
 function toggleMacroConfigModal(show) {
@@ -1421,6 +1432,7 @@ function handleValueSubmit() {
       diferencia = monto - sueldoBase;
     }
 
+    // UI Optimista
     data.premio = diferencia;
     renderMacroView();
 
@@ -1451,6 +1463,7 @@ function handleValueSubmit() {
   }
 }
 
+// Edición de Servicios Fijos
 function openServiceEditModal(serviceId) {
   currentEditingServiceId = serviceId;
   const form = document.getElementById('srv-edit-form');
@@ -1547,6 +1560,7 @@ async function deleteCurrentEditingService() {
   }
 }
 
+// Edición de Gastos Fijos y Deudas
 function openFixedExpenseModal(user, expenseId) {
   currentEditingFixedExpenseUser = user;
   currentEditingFixedExpenseId = expenseId;
@@ -1576,7 +1590,7 @@ function openFixedExpenseModal(user, expenseId) {
       document.getElementById('fixed-desc').value = g.descripcion || '';
       document.getElementById('fixed-currency').value = g.moneda || 'ARS';
 
-      const isDirect = g.isDirect === true || String(g.isDirect).toLowerCase() === 'true' || g.isDirect === 1;
+      const isDirect = (g.isDirect !== undefined) ? g.isDirect : true;
       if (chkDirect) chkDirect.checked = isDirect;
       toggleFixedMode(isDirect);
 
@@ -1652,25 +1666,14 @@ function handleFixedExpenseSubmit() {
 
   toggleFixedExpenseModal(false);
 
-  const list = (appState.macroData && appState.macroData.gastosFijos) ? appState.macroData.gastosFijos : [];
-  const existente = list.find(x => String(x.id) === String(currentEditingFixedExpenseId));
-
-  const startYear = (existente && existente.activoDesdeYear !== undefined && existente.activoDesdeYear !== null) 
-    ? existente.activoDesdeYear 
-    : appState.currentMacroYear;
-
-  const startMonth = (existente && existente.activoDesdeMonth !== undefined && existente.activoDesdeMonth !== null) 
-    ? existente.activoDesdeMonth 
-    : appState.currentMacroMonth;
-
-  const tempId = currentEditingFixedExpenseId || ('temp_fe_' + Date.now());
-
+  // Optimistic UI Update
   if (appState.macroData && appState.macroData.gastosFijos) {
-    let item = existente;
+    const list = appState.macroData.gastosFijos;
+    let item = list.find(x => String(x.id) === String(currentEditingFixedExpenseId));
 
     if (!item) {
       item = {
-        id: tempId,
+        id: currentEditingFixedExpenseId || ('temp_fe_' + Date.now()),
         usuario: currentEditingFixedExpenseUser,
         descripcion: descripcion,
         tipo: (tipo === 'debt' || tipo === 'deuda') ? 'deuda' : 'gasto',
@@ -1680,8 +1683,8 @@ function handleFixedExpenseSubmit() {
         monto: monto,
         montoBase: monto,
         moneda: moneda,
-        activoDesdeYear: startYear,
-        activoDesdeMonth: startMonth,
+        activoDesdeYear: appState.currentMacroYear,
+        activoDesdeMonth: appState.currentMacroMonth,
         hastaYear: null,
         hastaMonth: null,
         esPausado: false,
@@ -1696,8 +1699,6 @@ function handleFixedExpenseSubmit() {
       item.unitPrice = isDirect ? monto : unitPrice;
       item.monto = monto;
       item.moneda = moneda;
-      item.activoDesdeYear = startYear;
-      item.activoDesdeMonth = startMonth;
       if (!replicate) item.tieneExcepcionEsteMes = true;
     }
     renderMacroView();
@@ -1714,18 +1715,10 @@ function handleFixedExpenseSubmit() {
       unitPrice: isDirect ? monto : unitPrice,
       monto: monto,
       moneda: moneda,
-      activoDesdeYear: startYear,
-      activoDesdeMonth: startMonth,
-      hastaYear: existente ? existente.hastaYear : null,
-      hastaMonth: existente ? existente.hastaMonth : null
-    }).then(result => {
-      if (result && result.id && appState.macroData) {
-        const item = appState.macroData.gastosFijos.find(x => String(x.id) === String(tempId));
-        if (item) {
-          item.id = result.id;
-          renderMacroView();
-        }
-      }
+      activoDesdeYear: appState.currentMacroYear,
+      activoDesdeMonth: appState.currentMacroMonth,
+      hastaYear: null,
+      hastaMonth: null
     });
   } else {
     callBackendBackground('guardarExcepcionGastoFijo', {
@@ -1800,9 +1793,6 @@ function pauseFixedExpenseFuture() {
   g.hastaMonth = targetMonth;
   renderMacroView();
 
-  const startYear = (g.activoDesdeYear !== undefined && g.activoDesdeYear !== null) ? g.activoDesdeYear : appState.currentMacroYear;
-  const startMonth = (g.activoDesdeMonth !== undefined && g.activoDesdeMonth !== null) ? g.activoDesdeMonth : appState.currentMacroMonth;
-
   callBackendBackground('guardarGastoFijo', {
     id: g.id,
     usuario: g.usuario,
@@ -1813,8 +1803,8 @@ function pauseFixedExpenseFuture() {
     unitPrice: g.unitPrice,
     monto: g.montoBase !== undefined ? g.montoBase : g.monto,
     moneda: g.moneda,
-    activoDesdeYear: startYear,
-    activoDesdeMonth: startMonth,
+    activoDesdeYear: g.activoDesdeYear || appState.currentMacroYear,
+    activoDesdeMonth: (g.activoDesdeMonth !== undefined && g.activoDesdeMonth !== null) ? g.activoDesdeMonth : 0,
     hastaYear: targetYear,
     hastaMonth: targetMonth
   });
@@ -1833,9 +1823,6 @@ function reactivateFixedExpenseFuture() {
   g.hastaMonth = null;
   renderMacroView();
 
-  const startYear = (g.activoDesdeYear !== undefined && g.activoDesdeYear !== null) ? g.activoDesdeYear : appState.currentMacroYear;
-  const startMonth = (g.activoDesdeMonth !== undefined && g.activoDesdeMonth !== null) ? g.activoDesdeMonth : appState.currentMacroMonth;
-
   callBackendBackground('guardarGastoFijo', {
     id: g.id,
     usuario: g.usuario,
@@ -1846,8 +1833,8 @@ function reactivateFixedExpenseFuture() {
     unitPrice: g.unitPrice,
     monto: g.montoBase !== undefined ? g.montoBase : g.monto,
     moneda: g.moneda,
-    activoDesdeYear: startYear,
-    activoDesdeMonth: startMonth,
+    activoDesdeYear: g.activoDesdeYear || appState.currentMacroYear,
+    activoDesdeMonth: (g.activoDesdeMonth !== undefined && g.activoDesdeMonth !== null) ? g.activoDesdeMonth : 0,
     hastaYear: null,
     hastaMonth: null
   });
@@ -1865,6 +1852,7 @@ function deleteCurrentEditingFixedExpense() {
   callBackendBackground('eliminarGastoFijo', { id: currentEditingFixedExpenseId });
 }
 
+// BATCH UPDATE DE MACRO CONFIG
 function saveMacroConfig() {
   if (!macroDraft) {
     document.getElementById('macro-config-modal').classList.remove('active');
@@ -1874,6 +1862,7 @@ function saveMacroConfig() {
   const draft = macroDraft;
   document.getElementById('macro-config-modal').classList.remove('active');
 
+  // Optimistic UI Update
   if (appState.macroData) {
     appState.macroData.usdRate = draft.usdRate;
     appState.macroData.salaryBrian = draft.salaryBrian;
@@ -1900,6 +1889,7 @@ function saveMacroConfig() {
   macroDraft = null;
 }
 
+// Modal de Acción Rápida (+) en Mensual
 function toggleQuickAddModal(show) {
   document.getElementById('quick-add-modal').classList.toggle('active', show);
 }
@@ -1930,11 +1920,6 @@ async function recargarEstadoDiario_(conToast) {
   });
   appState.lastProcessedDate = data.lastProcessedDate;
   if (appState.currentView === 'micro') renderMicroView();
-
-  if (data.cierrePendiente) {
-    cierreDiaPendiente = data.cierrePendiente;
-    mostrarModalCierreDia_(cierreDiaPendiente);
-  }
 }
 
 async function bootstrapEstado_() {
@@ -1955,12 +1940,8 @@ async function bootstrapEstado_() {
   const colorActivo = appState.activeUser === 'Brian' ? data.accentColorBrian : data.accentColorVirginia;
   document.documentElement.style.setProperty('--accent-color', colorActivo);
 
-  switchView(appState.currentView);
-
-  if (data.cierrePendiente) {
-    cierreDiaPendiente = data.cierrePendiente;
-    mostrarModalCierreDia_(cierreDiaPendiente);
-  }
+  renderMicroView();
+  await chequearCierreDia_();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
