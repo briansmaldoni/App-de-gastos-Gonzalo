@@ -8,7 +8,7 @@
 // ============================================================
 // CONFIGURACIÓN DE CONEXIÓN AL BACKEND & SERVICE WORKER
 // ============================================================
-const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwXrTj_gDl5Pc72Ay6gnWxypF3JJhrZIMk93SMOy7dEnHZG-15kuppMfH1nGmctCpTjBw/exec';
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwfnvLWDk6Rf2kb9oO64GL18UMBdbGQaM7QX_Ut7elBI1ljM5QhXdNbxcDS4pAJ8SiEZw/exec';
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Error:', err));
@@ -1564,7 +1564,7 @@ function openFixedExpenseModal(user, expenseId) {
       document.getElementById('fixed-desc').value = g.descripcion || '';
       document.getElementById('fixed-currency').value = g.moneda || 'ARS';
 
-      const isDirect = (g.isDirect !== undefined) ? g.isDirect : true;
+      const isDirect = (g.isDirect !== undefined && g.isDirect !== null) ? Boolean(g.isDirect) : true;
       if (chkDirect) chkDirect.checked = isDirect;
       toggleFixedMode(isDirect);
 
@@ -1640,11 +1640,18 @@ function handleFixedExpenseSubmit() {
 
   toggleFixedExpenseModal(false);
 
+  const list = (appState.macroData && appState.macroData.gastosFijos) ? appState.macroData.gastosFijos : [];
+  const existente = list.find(x => String(x.id) === String(currentEditingFixedExpenseId));
+
+  const startYear = existente ? existente.activoDesdeYear : appState.currentMacroYear;
+  const startMonth = (existente && existente.activoDesdeMonth !== undefined && existente.activoDesdeMonth !== null) 
+    ? existente.activoDesdeMonth 
+    : appState.currentMacroMonth;
+
   const tempId = currentEditingFixedExpenseId || ('temp_fe_' + Date.now());
 
   if (appState.macroData && appState.macroData.gastosFijos) {
-    const list = appState.macroData.gastosFijos;
-    let item = list.find(x => String(x.id) === String(currentEditingFixedExpenseId));
+    let item = existente;
 
     if (!item) {
       item = {
@@ -1658,8 +1665,8 @@ function handleFixedExpenseSubmit() {
         monto: monto,
         montoBase: monto,
         moneda: moneda,
-        activoDesdeYear: appState.currentMacroYear,
-        activoDesdeMonth: appState.currentMacroMonth,
+        activoDesdeYear: startYear,
+        activoDesdeMonth: startMonth,
         hastaYear: null,
         hastaMonth: null,
         esPausado: false,
@@ -1674,6 +1681,8 @@ function handleFixedExpenseSubmit() {
       item.unitPrice = isDirect ? monto : unitPrice;
       item.monto = monto;
       item.moneda = moneda;
+      item.activoDesdeYear = startYear;
+      item.activoDesdeMonth = startMonth;
       if (!replicate) item.tieneExcepcionEsteMes = true;
     }
     renderMacroView();
@@ -1690,10 +1699,10 @@ function handleFixedExpenseSubmit() {
       unitPrice: isDirect ? monto : unitPrice,
       monto: monto,
       moneda: moneda,
-      activoDesdeYear: appState.currentMacroYear,
-      activoDesdeMonth: appState.currentMacroMonth,
-      hastaYear: null,
-      hastaMonth: null
+      activoDesdeYear: startYear,
+      activoDesdeMonth: startMonth,
+      hastaYear: existente ? existente.hastaYear : null,
+      hastaMonth: existente ? existente.hastaMonth : null
     }).then(result => {
       if (result && result.id && appState.macroData) {
         const item = appState.macroData.gastosFijos.find(x => String(x.id) === String(tempId));
@@ -1776,6 +1785,9 @@ function pauseFixedExpenseFuture() {
   g.hastaMonth = targetMonth;
   renderMacroView();
 
+  const startYear = (g.activoDesdeYear !== undefined && g.activoDesdeYear !== null) ? g.activoDesdeYear : appState.currentMacroYear;
+  const startMonth = (g.activoDesdeMonth !== undefined && g.activoDesdeMonth !== null) ? g.activoDesdeMonth : appState.currentMacroMonth;
+
   callBackendBackground('guardarGastoFijo', {
     id: g.id,
     usuario: g.usuario,
@@ -1786,8 +1798,8 @@ function pauseFixedExpenseFuture() {
     unitPrice: g.unitPrice,
     monto: g.montoBase !== undefined ? g.montoBase : g.monto,
     moneda: g.moneda,
-    activoDesdeYear: g.activoDesdeYear || appState.currentMacroYear,
-    activoDesdeMonth: (g.activoDesdeMonth !== undefined && g.activoDesdeMonth !== null) ? g.activoDesdeMonth : 0,
+    activoDesdeYear: startYear,
+    activoDesdeMonth: startMonth,
     hastaYear: targetYear,
     hastaMonth: targetMonth
   });
@@ -1806,6 +1818,9 @@ function reactivateFixedExpenseFuture() {
   g.hastaMonth = null;
   renderMacroView();
 
+  const startYear = (g.activoDesdeYear !== undefined && g.activoDesdeYear !== null) ? g.activoDesdeYear : appState.currentMacroYear;
+  const startMonth = (g.activoDesdeMonth !== undefined && g.activoDesdeMonth !== null) ? g.activoDesdeMonth : appState.currentMacroMonth;
+
   callBackendBackground('guardarGastoFijo', {
     id: g.id,
     usuario: g.usuario,
@@ -1816,8 +1831,8 @@ function reactivateFixedExpenseFuture() {
     unitPrice: g.unitPrice,
     monto: g.montoBase !== undefined ? g.montoBase : g.monto,
     moneda: g.moneda,
-    activoDesdeYear: g.activoDesdeYear || appState.currentMacroYear,
-    activoDesdeMonth: (g.activoDesdeMonth !== undefined && g.activoDesdeMonth !== null) ? g.activoDesdeMonth : 0,
+    activoDesdeYear: startYear,
+    activoDesdeMonth: startMonth,
     hastaYear: null,
     hastaMonth: null
   });
@@ -1929,7 +1944,7 @@ async function bootstrapEstado_() {
 
   if (data.cierrePendiente) {
     cierreDiaPendiente = data.cierrePendiente;
-    mostrarModalCierreDia_(cierreDiaPendiente);
+    mostrarModalCierreDia_(info);
   }
 }
 
