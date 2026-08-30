@@ -15,7 +15,7 @@ const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbz9BMLlbRrpFYptSJZp
 // ============================================================
 
 const appState = {
-  activeUser: 'Brian',
+  activeUser: 'Gonzalo',
   currentView: 'micro',
   homeBankingTotal: 0,
   bolsaTotal: 0,
@@ -44,7 +44,7 @@ let macroDraft = null;
 let currentEditingValueTarget = null;
 let currentEditingServiceId = null;
 let currentEditingFixedExpenseId = null;
-let currentEditingFixedExpenseUser = 'Brian';
+let currentEditingFixedExpenseUser = 'Gonzalo';
 
 let pendingSyncCount = 0;
 
@@ -256,18 +256,18 @@ function handleOverlayClick(event) {
 // ============================================================
 
 function cargarUsuarioYColorLocal_() {
-  appState.activeUser = localStorage.getItem('userActive') || 'Brian';
+  appState.activeUser = localStorage.getItem('userActive') || 'Gonzalo';
   const colorLocal = localStorage.getItem('accentColor_' + appState.activeUser) || '#18181b';
   document.documentElement.style.setProperty('--accent-color', colorLocal);
   pintarBotonesUsuario_();
 }
 
 function pintarBotonesUsuario_() {
-  const brianBtn = document.getElementById('user-btn-brian');
-  const virginiaBtn = document.getElementById('user-btn-virginia');
-  if (!brianBtn || !virginiaBtn) return;
-  const activo = appState.activeUser === 'Brian' ? brianBtn : virginiaBtn;
-  const inactivo = appState.activeUser === 'Brian' ? virginiaBtn : brianBtn;
+  const GonzaloBtn = document.getElementById('user-btn-Gonzalo');
+  const ElisaBtn = document.getElementById('user-btn-Elisa');
+  if (!GonzaloBtn || !ElisaBtn) return;
+  const activo = appState.activeUser === 'Gonzalo' ? GonzaloBtn : ElisaBtn;
+  const inactivo = appState.activeUser === 'Gonzalo' ? ElisaBtn : GonzaloBtn;
 
   activo.classList.add('bg-zinc-900', 'text-white', 'shadow-sm');
   activo.classList.remove('text-zinc-500', 'hover:text-zinc-900');
@@ -1070,8 +1070,8 @@ function renderMacroView() {
   // Calculo de SAC
   let sacCalculado = 0;
   if (esSacMonth) {
-    const sacB = data.sacBrian !== null ? data.sacBrian : (data.salaryBrian / 2);
-    const sacV = data.sacVirginia !== null ? data.sacVirginia : (data.salaryVirginia / 2);
+    const sacB = data.sacGonzalo !== null ? data.sacGonzalo : (data.salaryGonzalo / 2);
+    const sacV = data.sacElisa !== null ? data.sacElisa : (data.salaryElisa / 2);
     sacCalculado = sacB + sacV;
     const sacDisplay = document.getElementById('macro-sac-display');
     if (sacDisplay) sacDisplay.textContent = formatearMoneda_(sacCalculado);
@@ -1090,7 +1090,7 @@ function renderMacroView() {
   });
 
   // Total Ingresos
-  const totalIngresos = data.salaryBrian + data.salaryVirginia + sacCalculado + premioCalculado + totalDeudasARS;
+  const totalIngresos = data.salaryGonzalo + data.salaryElisa + sacCalculado + premioCalculado + totalDeudasARS;
   const incomeTotalEl = document.getElementById('macro-income-total');
   if (incomeTotalEl) incomeTotalEl.textContent = formatearMoneda_(totalIngresos);
 
@@ -1145,8 +1145,8 @@ function renderMacroIncomesList_(data, sac, premio, deudas, usdRate) {
   const premioNombre = esPrizeMonth ? 'Premio Variable y Ajustes' : 'Ajuste de Sueldo';
 
   let html = '';
-  html += '<div class="flex justify-between"><span>Sueldo Brian</span><span class="font-bold">' + formatearMoneda_(data.salaryBrian) + '</span></div>';
-  html += '<div class="flex justify-between"><span>Sueldo Virginia</span><span class="font-bold">' + formatearMoneda_(data.salaryVirginia) + '</span></div>';
+  html += '<div class="flex justify-between"><span>Sueldo Gonzalo</span><span class="font-bold">' + formatearMoneda_(data.salaryGonzalo) + '</span></div>';
+  html += '<div class="flex justify-between"><span>Sueldo Elisa</span><span class="font-bold">' + formatearMoneda_(data.salaryElisa) + '</span></div>';
   if (sac > 0) html += '<div class="flex justify-between text-amber-800 font-medium"><span>SAC (Aguinaldo)</span><span class="font-bold">' + formatearMoneda_(sac) + '</span></div>';
   if (premio !== 0) html += '<div class="flex justify-between text-emerald-800 font-medium"><span>' + premioNombre + '</span><span class="font-bold">' + formatearMoneda_(premio) + '</span></div>';
   
@@ -1223,11 +1223,11 @@ function renderMacroDebtsList_(deudas, usdRate) {
 }
 
 function renderMacroFixedExpensesLists_(gastosFijos, usdRate) {
-  const brianCont = document.getElementById('brian-fixed-list');
-  const virginiaCont = document.getElementById('virginia-fixed-list');
+  const GonzaloCont = document.getElementById('Gonzalo-fixed-list');
+  const ElisaCont = document.getElementById('Elisa-fixed-list');
 
-  const brianItems = gastosFijos.filter(g => g.usuario === 'Brian');
-  const virginiaItems = gastosFijos.filter(g => g.usuario === 'Virginia');
+  const GonzaloItems = gastosFijos.filter(g => g.usuario === 'Gonzalo');
+  const ElisaItems = gastosFijos.filter(g => g.usuario === 'Elisa');
 
   const renderItem = (g) => {
     const montoARS = g.moneda === 'USD' ? (g.monto * usdRate) : g.monto;
@@ -1249,12 +1249,12 @@ function renderMacroFixedExpensesLists_(gastosFijos, usdRate) {
       '<span class="font-black ' + (esDeshabilitado ? 'text-zinc-400' : (esDeuda ? 'text-emerald-600' : 'text-zinc-900')) + '">' + (esDeshabilitado ? '$ 0,00' : ((esDeuda ? '+' : '-') + formatearMoneda_(montoARS))) + '</span></div>';
   };
 
-  if (brianCont) {
-    brianCont.innerHTML = brianItems.length ? brianItems.map(renderItem).join('') : '<p class="text-[10px] text-zinc-400 py-1">Sin gastos fijos cargados</p>';
+  if (GonzaloCont) {
+    GonzaloCont.innerHTML = GonzaloItems.length ? GonzaloItems.map(renderItem).join('') : '<p class="text-[10px] text-zinc-400 py-1">Sin gastos fijos cargados</p>';
   }
 
-  if (virginiaCont) {
-    virginiaCont.innerHTML = virginiaItems.length ? virginiaItems.map(renderItem).join('') : '<p class="text-[10px] text-zinc-400 py-1">Sin gastos fijos cargados</p>';
+  if (ElisaCont) {
+    ElisaCont.innerHTML = ElisaItems.length ? ElisaItems.map(renderItem).join('') : '<p class="text-[10px] text-zinc-400 py-1">Sin gastos fijos cargados</p>';
   }
 }
 
@@ -1347,8 +1347,8 @@ function toggleMacroConfigModal(show) {
     const data = appState.macroData || {};
     macroDraft = {
       usdRate: data.usdRate || 0,
-      salaryBrian: data.salaryBrian || 0,
-      salaryVirginia: data.salaryVirginia || 0,
+      salaryGonzalo: data.salaryGonzalo || 0,
+      salaryElisa: data.salaryElisa || 0,
       serviciosFijos: JSON.parse(JSON.stringify(data.serviciosFijos || [])),
       serviciosEliminados: []
     };
@@ -1362,12 +1362,12 @@ function toggleMacroConfigModal(show) {
 function renderMacroConfigDraft_() {
   if (!macroDraft) return;
   const usdEl = document.getElementById('display-usd-rate');
-  const brianEl = document.getElementById('display-salary-brian');
-  const virginiaEl = document.getElementById('display-salary-virginia');
+  const GonzaloEl = document.getElementById('display-salary-Gonzalo');
+  const ElisaEl = document.getElementById('display-salary-Elisa');
 
   if (usdEl) usdEl.textContent = formatearMoneda_(macroDraft.usdRate);
-  if (brianEl) brianEl.textContent = formatearMoneda_(macroDraft.salaryBrian);
-  if (virginiaEl) virginiaEl.textContent = formatearMoneda_(macroDraft.salaryVirginia);
+  if (GonzaloEl) GonzaloEl.textContent = formatearMoneda_(macroDraft.salaryGonzalo);
+  if (ElisaEl) ElisaEl.textContent = formatearMoneda_(macroDraft.salaryElisa);
 
   renderMacroServicesConfigList_(macroDraft.serviciosFijos || []);
 }
@@ -1403,7 +1403,7 @@ function openValueEditModal(target) {
   const inputId = 'generic-value-input';
 
   let valorActual = 0;
-  const data = (macroDraft && (target === 'usd' || target === 'salary-brian' || target === 'salary-virginia'))
+  const data = (macroDraft && (target === 'usd' || target === 'salary-Gonzalo' || target === 'salary-Elisa'))
     ? macroDraft
     : (appState.macroData || {});
 
@@ -1413,31 +1413,31 @@ function openValueEditModal(target) {
     title.textContent = 'Editar Cotización Dólar';
     label.textContent = 'Dólar Oficial (ARS)';
     valorActual = data.usdRate || 0;
-  } else if (target === 'salary-brian') {
-    title.textContent = 'Editar Sueldo Brian';
+  } else if (target === 'salary-Gonzalo') {
+    title.textContent = 'Editar Sueldo Gonzalo';
     label.textContent = 'Sueldo Fijo Mensual ($)';
-    valorActual = data.salaryBrian || 0;
-  } else if (target === 'salary-virginia') {
-    title.textContent = 'Editar Sueldo Virginia';
+    valorActual = data.salaryGonzalo || 0;
+  } else if (target === 'salary-Elisa') {
+    title.textContent = 'Editar Sueldo Elisa';
     label.textContent = 'Sueldo Fijo Mensual ($)';
-    valorActual = data.salaryVirginia || 0;
-  } else if (target === 'prize-brian') {
+    valorActual = data.salaryElisa || 0;
+  } else if (target === 'prize-Gonzalo') {
     const esPrizeMonth = (data.month === 1 || data.month === 4 || data.month === 7 || data.month === 10);
     title.textContent = esPrizeMonth ? 'Calcular Premio y Ajustes' : 'Calcular Ajuste de Sueldo';
     label.textContent = 'Total Cobrado en Bolsillo ($)';
     
-    const sueldoBase = data.salaryBrian || 0;
+    const sueldoBase = data.salaryGonzalo || 0;
     const extraPrevio = data.premio || 0;
     valorActual = extraPrevio !== 0 ? (sueldoBase + extraPrevio) : sueldoBase;
 
     if (helper) {
-      helper.textContent = 'Sueldo base de Brian: ' + formatearMoneda_(sueldoBase) + '. Se calculará la diferencia automáticamente.';
+      helper.textContent = 'Sueldo base de Gonzalo: ' + formatearMoneda_(sueldoBase) + '. Se calculará la diferencia automáticamente.';
       helper.classList.remove('hidden');
     }
   } else if (target === 'sac-value') {
     title.textContent = 'Editar SAC (Aguinaldo)';
     label.textContent = 'Monto Aguinaldo Este Mes ($)';
-    valorActual = (data.sacBrian || 0) + (data.sacVirginia || 0);
+    valorActual = (data.sacGonzalo || 0) + (data.sacElisa || 0);
   }
 
   attachMoneyInput(inputId, () => {});
@@ -1453,21 +1453,21 @@ function handleValueSubmit() {
   const monto = getMoneyValue('generic-value-input');
   toggleValueEditModal(false);
 
-  if (macroDraft && (currentEditingValueTarget === 'usd' || currentEditingValueTarget === 'salary-brian' || currentEditingValueTarget === 'salary-virginia')) {
+  if (macroDraft && (currentEditingValueTarget === 'usd' || currentEditingValueTarget === 'salary-Gonzalo' || currentEditingValueTarget === 'salary-Elisa')) {
     if (currentEditingValueTarget === 'usd') {
       macroDraft.usdRate = monto;
-    } else if (currentEditingValueTarget === 'salary-brian') {
-      macroDraft.salaryBrian = monto;
-    } else if (currentEditingValueTarget === 'salary-virginia') {
-      macroDraft.salaryVirginia = monto;
+    } else if (currentEditingValueTarget === 'salary-Gonzalo') {
+      macroDraft.salaryGonzalo = monto;
+    } else if (currentEditingValueTarget === 'salary-Elisa') {
+      macroDraft.salaryElisa = monto;
     }
     renderMacroConfigDraft_();
     return;
   }
 
-  if (currentEditingValueTarget === 'prize-brian') {
+  if (currentEditingValueTarget === 'prize-Gonzalo') {
     const data = appState.macroData || {};
-    const sueldoBase = data.salaryBrian || 0;
+    const sueldoBase = data.salaryGonzalo || 0;
     let diferencia = 0;
     if (monto > 0) {
       diferencia = monto - sueldoBase;
@@ -1484,20 +1484,20 @@ function handleValueSubmit() {
     });
   } else if (currentEditingValueTarget === 'sac-value') {
     const data = appState.macroData || {};
-    data.sacBrian = monto / 2;
-    data.sacVirginia = monto / 2;
+    data.sacGonzalo = monto / 2;
+    data.sacElisa = monto / 2;
     renderMacroView();
 
     callBackendBackground('guardarSacOverride', {
       year: appState.currentMacroYear,
       month: appState.currentMacroMonth,
-      usuario: 'Brian',
+      usuario: 'Gonzalo',
       monto: monto / 2
     }).then(() => {
       callBackendBackground('guardarSacOverride', {
         year: appState.currentMacroYear,
         month: appState.currentMacroMonth,
-        usuario: 'Virginia',
+        usuario: 'Elisa',
         monto: monto / 2
       });
     });
@@ -1906,16 +1906,16 @@ function saveMacroConfig() {
   // Optimistic UI Update
   if (appState.macroData) {
     appState.macroData.usdRate = draft.usdRate;
-    appState.macroData.salaryBrian = draft.salaryBrian;
-    appState.macroData.salaryVirginia = draft.salaryVirginia;
+    appState.macroData.salaryGonzalo = draft.salaryGonzalo;
+    appState.macroData.salaryElisa = draft.salaryElisa;
     appState.macroData.serviciosFijos = draft.serviciosFijos;
     renderMacroView();
   }
 
   callBackendBackground('guardarConfiguracionMacroBatch', {
     usdRate: draft.usdRate,
-    salaryBrian: draft.salaryBrian,
-    salaryVirginia: draft.salaryVirginia,
+    salaryGonzalo: draft.salaryGonzalo,
+    salaryElisa: draft.salaryElisa,
     serviciosFijos: draft.serviciosFijos,
     serviciosEliminados: draft.serviciosEliminados,
     year: appState.currentMacroYear,
@@ -1976,9 +1976,9 @@ async function bootstrapEstado_() {
   });
   appState.lastProcessedDate = data.lastProcessedDate;
 
-  localStorage.setItem('accentColor_Brian', data.accentColorBrian);
-  localStorage.setItem('accentColor_Virginia', data.accentColorVirginia);
-  const colorActivo = appState.activeUser === 'Brian' ? data.accentColorBrian : data.accentColorVirginia;
+  localStorage.setItem('accentColor_Gonzalo', data.accentColorGonzalo);
+  localStorage.setItem('accentColor_Elisa', data.accentColorElisa);
+  const colorActivo = appState.activeUser === 'Gonzalo' ? data.accentColorGonzalo : data.accentColorElisa;
   document.documentElement.style.setProperty('--accent-color', colorActivo);
 
   renderMicroView();
