@@ -8,7 +8,7 @@
 // ============================================================
 // CONFIGURACIÓN DE CONEXIÓN AL BACKEND
 // ============================================================
-const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwXrTj_gDl5Pc72Ay6gnWxypF3JJhrZIMk93SMOy7dEnHZG-15kuppMfH1nGmctCpTjBw/exec';
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbz9BMLlbRrpFYptSJZp8qRQqErbzliw1izKqhu2InNleO3EfWQvM-IbKvd_KMC6LSkN/exec';
 
 // ============================================================
 // ESTADO GLOBAL Y SINCRONIZACIÓN EN SEGUNDO PLANO
