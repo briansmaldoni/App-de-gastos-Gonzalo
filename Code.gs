@@ -442,8 +442,8 @@ function getEstadoDiario_() {
   return {
     homeBankingTotal: getConfigNumero_(cfg, 'homeBankingTotal', 0),
     bolsaTotal: getConfigNumero_(cfg, 'bolsaTotal', 0),
-    accentColorBrian: cfg.accentColorBrian || '#18181b',
-    accentColorVirginia: cfg.accentColorVirginia || '#18181b',
+    accentColorGonzalo: cfg.accentColorGonzalo || '#18181b',
+    accentColorElisa: cfg.accentColorElisa || '#18181b',
     lastProcessedDate: cfg.lastProcessedDate || null,
     diaCobro: diasInfo.diaCobro,
     diasRestantes: diasInfo.fechas,
@@ -690,21 +690,21 @@ function getEstadoMensual_(year, month) {
 
   const premioRow = leerFilas_('Premios').find(p => Number(p.year) === Number(year) && Number(p.month) === Number(month));
   const sacRows = leerFilas_('SacOverrides').filter(s => Number(s.year) === Number(year) && Number(s.month) === Number(month));
-  const sacBrian = sacRows.find(s => s.usuario === 'Brian');
-  const sacVirginia = sacRows.find(s => s.usuario === 'Virginia');
+  const sacGonzalo = sacRows.find(s => s.usuario === 'Gonzalo');
+  const sacElisa = sacRows.find(s => s.usuario === 'Elisa');
 
   return {
     year: year,
     month: month,
-    salaryBrian: getConfigNumero_(cfg, 'salaryBrian', 0),
-    salaryVirginia: getConfigNumero_(cfg, 'salaryVirginia', 0),
+    salaryGonzalo: getConfigNumero_(cfg, 'salaryGonzalo', 0),
+    salaryElisa: getConfigNumero_(cfg, 'salaryElisa', 0),
     usdRate: getConfigNumero_(cfg, 'usdRate', 0),
     gastosFijos: gastosFijos,
     serviciosFijos: serviciosFijos,
     serviciosDeshabilitadosEsteMes: serviciosDeshabilitadosEsteMes,
     premio: premioRow ? premioRow.monto : 0,
-    sacBrian: sacBrian ? sacBrian.monto : null,
-    sacVirginia: sacVirginia ? sacVirginia.monto : null
+    sacGonzalo: sacGonzalo ? sacGonzalo.monto : null,
+    sacElisa: sacElisa ? sacElisa.monto : null
   };
 }
 
@@ -734,8 +734,8 @@ function toggleAllServiciosBatch_(year, month, habilitarTodos) {
 function guardarConfiguracionMacroBatch_(payload) {
   setConfigValores_({
     usdRate: payload.usdRate,
-    salaryBrian: payload.salaryBrian,
-    salaryVirginia: payload.salaryVirginia
+    salaryGonzalo: payload.salaryGonzalo,
+    salaryElisa: payload.salaryElisa
   });
 
   if (Array.isArray(payload.serviciosEliminados)) {
@@ -912,12 +912,12 @@ function setupSheets() {
   setConfigValores_({
     homeBankingTotal: cfg.homeBankingTotal || '0',
     bolsaTotal: cfg.bolsaTotal || '0',
-    accentColorBrian: cfg.accentColorBrian || '#18181b',
-    accentColorVirginia: cfg.accentColorVirginia || '#18181b',
+    accentColorGonzalo: cfg.accentColorGonzalo || '#18181b',
+    accentColorElisa: cfg.accentColorElisa || '#18181b',
     lastProcessedDate: cfg.lastProcessedDate || formatearFechaISO_(new Date()),
     usdRate: cfg.usdRate || '0',
-    salaryBrian: cfg.salaryBrian || '0',
-    salaryVirginia: cfg.salaryVirginia || '0'
+    salaryGonzalo: cfg.salaryGonzalo || '0',
+    salaryElisa: cfg.salaryElisa || '0'
   });
 
   Logger.log('Setup completo. Pestañas creadas y aseguradas: ' + Object.keys(SHEET_SCHEMAS).join(', '));
